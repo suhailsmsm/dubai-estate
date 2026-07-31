@@ -47,10 +47,15 @@ jobs:
           Write-Host "DubaiEstate.exe size: $([math]::Round($size,2)) MB"
 
       - name: Install Inno Setup
-        uses: Duta/Inno-Setup-Action@v1.0.0
-        with:
-          path: dubai-estate/packaging/installer.iss
-          options: /Q
+        shell: pwsh
+        run: |
+          choco install innosetup -y
+          
+      - name: Build installer with Inno Setup
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          & $iscc packaging/installer.iss /Q
 
       - name: Upload exe + installer artifacts
         uses: actions/upload-artifact@v4
