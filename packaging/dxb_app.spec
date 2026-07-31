@@ -47,7 +47,7 @@ a = Analysis(
     binaries=[],
     datas=datas,
     hiddenimports=[
-        "webview.platforms.edgechrom",
+        "webview.platforms.edgechromium",
         "webview",
         "clr_loader",
         "pythonnet",

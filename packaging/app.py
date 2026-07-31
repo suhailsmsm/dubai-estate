@@ -30,14 +30,28 @@ from pathlib import Path
 
 
 def app_root() -> Path:
-    """Repo root in dev; PyInstaller bundle dir when frozen."""
+    """The directory containing bundled app files.
+
+    - Frozen (PyInstaller onefile): bundled data (including ui/) is extracted
+      to a temp dir at sys._MEIPASS at startup — that's where files live, NOT
+      next to the exe.
+    - Dev: the repo root.
+    """
     if getattr(sys, "frozen", False):
+        meipass = getattr(sys, "_MEIPASS", None)
+        if meipass:
+            return Path(meipass)
         return Path(sys.executable).resolve().parent
     return Path(__file__).resolve().parent.parent
 
 
 def ui_dir() -> Path:
-    """The static UI folder. When frozen, it's bundled under _internal/ui."""
+    """The static UI folder.
+
+    - Frozen (onefile): bundled under sys._MEIPASS/ui.
+    - Frozen (onedir) / manual dist: next to the exe (./ui or ./_internal/ui).
+    - Dev: repo root / ui.
+    """
     root = app_root()
     for cand in (root / "ui", root / "_internal" / "ui"):
         if cand.is_dir():
