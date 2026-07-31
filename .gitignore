@@ -12,7 +12,12 @@ dist/
 # Root-anchored on purpose: an unanchored `db/` also matched
 # elt/src/dxb/db/, silently keeping the entire schema out of git.
 /db/
-/data/
+# Data files - but allow specific files needed for build
+/data/*
+!/data/bayut/
+/data/bayut/*
+!/data/bayut/area_individual_history_2016_2026.json
+!/data/bayut/listings.csv
 
 # Electron build output
 node_modules/
