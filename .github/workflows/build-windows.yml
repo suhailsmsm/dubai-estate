@@ -14,9 +14,6 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: dubai-estate
 
     steps:
       - name: Checkout
