@@ -29,7 +29,7 @@ block_cipher = None
 # bundle substantially (tkinter alone is ~3MB).
 EXCLUDES = [
     "tkinter", "unittest", "pydoc_data", "test", "tests",
-    "distutils", "lib2to3", "ensurepip", "venv",
+    "lib2to3", "ensurepip", "venv",
     "turtle", "turtledemo", "curses",
     "xmlrpc", "ftplib", "telnetlib", "nntplib", "imaplib", "smtplib", "poplib",
     "audioop", "sndhdr", "aifc", "sunau", "wave", "chunk",
