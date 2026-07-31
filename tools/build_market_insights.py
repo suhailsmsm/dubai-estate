@@ -85,7 +85,7 @@ def _load_history():
 
 def _load_listings():
     rows = []
-    with (DATA / "listings.csv").open(newline="") as f:
+    with (DATA / "listings.csv").open(newline="", encoding="utf-8") as f:
         for r in csv.DictReader(f):
             try:
                 price = float(r["price"])

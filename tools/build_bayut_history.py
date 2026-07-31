@@ -107,7 +107,7 @@ def load_current_listings() -> dict[str, list[dict]]:
     path = DATA / "listings.csv"
     if not path.exists():
         return by_key
-    with path.open(newline="") as f:
+    with path.open(newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
             try:
                 price = float(row["price"])
