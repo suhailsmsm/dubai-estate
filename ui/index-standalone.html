@@ -228,11 +228,24 @@ let state = {
   selectedArea: null,
   currentPage: 'map',
   map: null,
-  markers: []
+  markers: [],
+  areaMarkers: {}
 };
+
+// Online status indicator
+function updateOnlineStatus() {
+  const pill = document.getElementById('coverage-pill');
+  const isOnline = navigator.onLine;
+  pill.innerHTML = `<span class="dot" style="background:${isOnline ? 'var(--accent2)' : 'var(--danger)'}"></span><span>${isOnline ? 'Online' : 'Offline'}</span>`;
+}
 
 // Initialize
 function bootstrap() {
+  // Check internet connectivity and show status
+  updateOnlineStatus();
+  window.addEventListener('online', updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+  
   if (!MI) {
     document.getElementById('coverage-text').textContent = 'No data loaded';
     document.getElementById('area-list').innerHTML = '<div class="empty-state"><div class="es-icon">⚠️</div><div class="es-title">Data not found</div><div class="es-sub">market-insights.js not loaded</div></div>';
@@ -308,8 +321,87 @@ function initMap() {
     maxZoom: 18
   }).addTo(state.map);
   
-  // Add markers for areas with coordinates (would need lat/lng in data)
-  // For now, just show the map
+  // Dubai area coordinates (approximate centers)
+  const areaCoords = {
+    'dubai': {lat: 25.2048, lng: 55.2708},
+    'dubai-marina': {lat: 25.0805, lng: 55.1405},
+    'downtown-dubai': {lat: 25.1972, lng: 55.2796},
+    'business-bay': {lat: 25.1896, lng: 55.2615},
+    'jbr': {lat: 25.0725, lng: 55.1333},
+    'jvc': {lat: 25.0515, lng: 55.2335},
+    'jlt': {lat: 25.0657, lng: 55.1422},
+    'palm-jumeirah': {lat: 25.1121, lng: 55.1390},
+    'dubai-hills': {lat: 25.0657, lng: 55.3512},
+    'arabian-ranches': {lat: 25.0443, lng: 55.2866},
+    'dubai-silicon-oasis': {lat: 25.0657, lng: 55.3877},
+    'dubai-sports-city': {lat: 25.0525, lng: 55.2712},
+    'dubai-production-city': {lat: 25.0450, lng: 55.2475},
+    'dubai-investment-park': {lat: 24.9750, lng: 55.2500},
+    'meydan': {lat: 25.1650, lng: 55.3300},
+    'dubai-creek-harbour': {lat: 25.1950, lng: 55.3400},
+    'city-walk': {lat: 25.2100, lng: 55.2600},
+    'dubai-design-district': {lat: 25.2050, lng: 55.2800},
+    'al-barsha': {lat: 25.0950, lng: 55.2250},
+    'al-quoz': {lat: 25.1150, lng: 55.2350},
+    'karama': {lat: 25.2450, lng: 55.3000},
+    'bur-dubai': {lat: 25.2650, lng: 55.2950},
+    'deira': {lat: 25.2750, lng: 55.3200},
+    'al-satwa': {lat: 25.2150, lng: 55.2700},
+    'al-karama': {lat: 25.2450, lng: 55.3000},
+    'umm-suqeim': {lat: 25.1550, lng: 55.2000},
+    'al-thanya': {lat: 25.2250, lng: 55.2800},
+    'al-mankhool': {lat: 25.2550, lng: 55.2900},
+    'al-ras': {lat: 25.2700, lng: 55.3100},
+    'al-fahidi': {lat: 25.2680, lng: 55.2950},
+    'al-mamzar': {lat: 25.2900, lng: 55.3400},
+    'al-qusais': {lat: 25.2800, lng: 55.3800},
+    'al-twar': {lat: 25.2600, lng: 55.3700},
+    'mirdif': {lat: 25.2200, lng: 55.4000},
+    'al-warqa': {lat: 25.2000, lng: 55.4200},
+    'nad-al-hamar': {lat: 25.1800, lng: 55.3900},
+    'al-awir': {lat: 25.1500, lng: 55.4500},
+    'hatta': {lat: 24.8000, lng: 56.1000},
+    'abu-dhabi': {lat: 24.4539, lng: 54.3773},
+    'sharjah': {lat: 25.3573, lng: 55.4033},
+    'al-ain': {lat: 24.2075, lng: 55.7447}
+  };
+  
+  // Add markers for areas with data
+  MI.areas.forEach(area => {
+    const key = area.area.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+    const coords = areaCoords[key] || areaCoords[area.city];
+    
+    if (coords && area.gross_yield_pct != null) {
+      // Color based on yield
+      let color = '#e05c5c'; // red < 4%
+      if (area.gross_yield_pct >= 6) color = '#2ea043'; // green >= 6%
+      else if (area.gross_yield_pct >= 4) color = '#f0a500'; // yellow 4-6%
+      
+      const marker = L.circleMarker([coords.lat, coords.lng], {
+        radius: 8,
+        fillColor: color,
+        color: '#fff',
+        weight: 1,
+        opacity: 1,
+        fillOpacity: 0.8
+      }).addTo(state.map);
+      
+      marker.bindPopup(`
+        <div style="font-family:-apple-system,sans-serif;min-width:180px">
+          <div style="font-weight:600;font-size:14px;margin-bottom:6px">${area.area}</div>
+          <div style="font-size:12px;color:#666;text-transform:capitalize">${area.city}</div>
+          <div style="margin-top:8px;font-size:12px">
+            <div><strong>Yield:</strong> ${fmt.pct(area.gross_yield_pct)}</div>
+            ${area.med_sale ? `<div><strong>Sale:</strong> ${fmt.aed(area.med_sale)}</div>` : ''}
+            ${area.med_rent_annual ? `<div><strong>Rent:</strong> ${fmt.aed(area.med_rent_annual)}/yr</div>` : ''}
+            ${area.cagr_pct != null ? `<div><strong>CAGR:</strong> ${fmt.pct(area.cagr_pct)}</div>` : ''}
+          </div>
+        </div>
+      `);
+      
+      state.areaMarkers[area.key] = marker;
+    }
+  });
 }
 
 // Rankings
