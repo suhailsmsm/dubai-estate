@@ -34,6 +34,18 @@ jobs:
           python tools/build_bayut_history.py
           python tools/build_market_insights.py
 
+      - name: Convert PNG icon to ICO
+        shell: pwsh
+        run: |
+          python -c "
+          from PIL import Image
+          img = Image.open('icon.png')
+          # Create multi-size ICO (16, 32, 48, 64, 128, 256)
+          sizes = [(16,16), (32,32), (48,48), (64,64), (128,128), (256,256)]
+          img.save('packaging/app.ico', format='ICO', sizes=sizes)
+          print('Created packaging/app.ico')
+          "
+
       - name: Build exe with PyInstaller
         run: pyinstaller packaging/dxb_app.spec --noconfirm --log-level WARN
 

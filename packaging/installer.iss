@@ -34,8 +34,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=lowest
 ; Per-user install (no admin needed) — pairs with APPDATA settings location.
 UninstallDisplayIcon={app}\{#MyAppExeName}
-; Optional icon (build works if absent; remove comment once app.ico exists)
-; SetupIconFile=app.ico
+SetupIconFile=app.ico
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
