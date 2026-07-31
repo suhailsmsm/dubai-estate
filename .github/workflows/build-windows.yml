@@ -59,8 +59,8 @@ jobs:
         with:
           name: DubaiEstate-windows
           path: |
-            dubai-estate/dist/DubaiEstate.exe
-            dubai-estate/dist/installer/DubaiEstate-Setup-*.exe
+            dist/DubaiEstate.exe
+            dist/installer/DubaiEstate-Setup-*.exe
           if-no-files-found: error
 
       - name: Create Release (on tags)
@@ -68,6 +68,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dubai-estate/dist/DubaiEstate.exe
-            dubai-estate/dist/installer/DubaiEstate-Setup-*.exe
+            dist/DubaiEstate.exe
+            dist/installer/DubaiEstate-Setup-*.exe
           draft: true
