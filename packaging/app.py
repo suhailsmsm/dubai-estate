@@ -107,7 +107,8 @@ def main() -> None:
     t = threading.Thread(target=server.serve_forever, daemon=True)
     t.start()
 
-    url = f"http://127.0.0.1:{port}/"
+    # Use the standalone index page that works with bundled data (no API dependency)
+    url = f"http://127.0.0.1:{port}/index-standalone.html"
     if not wait_for_port("127.0.0.1", port):
         # Last resort: open in the default browser if the window fails.
         import webbrowser
