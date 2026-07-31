@@ -35,7 +35,6 @@ EXCLUDES = [
 
 datas = [
     (str(REPO_ROOT / "ui"), "ui"),
-    (str(REPO_ROOT / "tools/ai_proxy.py"), "tools"),
 ]
 # pywebview ships platform backends we don't need on non-Windows — but since we
 # build on Windows for Windows, keep it simple and let collect_data_files pull
@@ -43,7 +42,7 @@ datas = [
 datas += collect_data_files("webview", include_py_files=False)
 
 a = Analysis(
-    [str(REPO_ROOT / "packaging/app.py")],
+    [str(REPO_ROOT / "packaging/app.py"), str(REPO_ROOT / "tools/ai_proxy.py")],
     pathex=[str(REPO_ROOT)],
     binaries=[],
     datas=datas,
