@@ -1,10 +1,10 @@
 name: Build Windows Installer
 
-# Builds DubaiEstate.exe (PyInstaller) + DubaiEstate-Setup installer (Inno Setup)
-# on a free GitHub-hosted Windows runner, then uploads them as a downloadable
-# artifact. Run it from the Actions tab (workflow_dispatch) or on tag pushes.
-#
-# This is how you get a real Windows .exe without owning a Windows machine.
+# Builds DubaiEstate.exe (PyInstaller) then wraps it into the
+# DubaiEstate-Setup installer (Inno Setup) on a free GitHub-hosted Windows
+# runner, and uploads ONLY the installer as a downloadable artifact. The
+# standalone portable DubaiEstate.exe is an intermediate build step and is
+# not published. Run from the Actions tab (workflow_dispatch) or on tag pushes.
 
 on:
   workflow_dispatch:        # manual: Actions tab → Run workflow
@@ -54,13 +54,11 @@ jobs:
           $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           & $iscc packaging/installer.iss /Q
 
-      - name: Upload exe + installer artifacts
+      - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DubaiEstate-windows
-          path: |
-            dist/DubaiEstate.exe
-            dist/installer/DubaiEstate-Setup-*.exe
+          name: DubaiEstate-installer
+          path: dist/installer/DubaiEstate-Setup-*.exe
           if-no-files-found: error
 
       - name: Create Release (on tags)
@@ -68,6 +66,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/DubaiEstate.exe
             dist/installer/DubaiEstate-Setup-*.exe
           draft: true

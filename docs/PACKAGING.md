@@ -5,8 +5,8 @@ powered by the system **Edge WebView2** (no bundled Chromium → small exe),
 with the AI proxy + UI served from one local origin.
 
 ```
-DubaiEstate.exe            # the app (PyInstaller --onefile)
-DubaiEstate-Setup-1.0.0.exe # installer: Start Menu + Desktop shortcuts, uninstaller
+DubaiEstate.exe             # intermediate build output (PyInstaller --onefile) — NOT distributed
+DubaiEstate-Setup-1.0.0.exe # the only distributed artifact: installer w/ Start Menu + Desktop shortcuts, uninstaller
 ```
 
 ## What gets bundled
@@ -26,10 +26,10 @@ Pricing History and AI Assistant pages work fully offline.
 ### A. GitHub Actions — no Windows machine needed (recommended)
 Push the repo to GitHub, then:
 1. **Actions** tab → **Build Windows Installer** → **Run workflow**.
-2. When it finishes, download the **DubaiEstate-windows** artifact (contains
-   `DubaiEstate.exe` + `DubaiEstate-Setup-*.exe`).
+2. When it finishes, download the **DubaiEstate-installer** artifact (contains
+   `DubaiEstate-Setup-*.exe`).
 3. For a public release: push a tag like `v1.0.0` → the workflow auto-creates a
-   draft GitHub Release with both files attached.
+   draft GitHub Release with the installer attached.
 
 This runs entirely on free GitHub-hosted Windows runners.
 
