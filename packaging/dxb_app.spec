@@ -15,7 +15,13 @@ Build on Windows:
 The exe is written to dist/DubaiEstate.exe.
 """
 
+import os
+from pathlib import Path
 from PyInstaller.utils.hooks import collect_data_files
+
+# Get the repo root (parent of packaging/ directory where this spec file lives)
+SPEC_DIR = Path(SPECPATH)
+REPO_ROOT = SPEC_DIR.parent
 
 block_cipher = None
 
@@ -31,8 +37,8 @@ EXCLUDES = [
 ]
 
 datas = [
-    ("ui", "ui"),
-    ("tools/ai_proxy.py", "tools"),
+    (str(REPO_ROOT / "ui"), "ui"),
+    (str(REPO_ROOT / "tools/ai_proxy.py"), "tools"),
 ]
 # pywebview ships platform backends we don't need on non-Windows — but since we
 # build on Windows for Windows, keep it simple and let collect_data_files pull
@@ -40,8 +46,8 @@ datas = [
 datas += collect_data_files("webview", include_py_files=False)
 
 a = Analysis(
-    ["packaging/app.py"],
-    pathex=[],
+    [str(REPO_ROOT / "packaging/app.py")],
+    pathex=[str(REPO_ROOT)],
     binaries=[],
     datas=datas,
     hiddenimports=[
