@@ -1,0 +1,14 @@
+# Python build dependencies for packaging Dubai Estate as a Windows exe.
+# Install on a Windows machine (or use the GitHub Actions workflow, which
+# installs these automatically):
+#   pip install -r packaging/requirements-build.txt
+#
+# Runtime note:
+#   pywebview uses the Edge WebView2 runtime, preinstalled on Windows 10/11.
+#   For older Windows, the Inno Setup installer bundles the WebView2 Evergreen
+#   Bootstrapper (see packaging/installer.iss).
+
+pyinstaller>=6.5
+pywebview>=5.3
+# Windows backend for pywebview (EdgeChromium via cffi, no heavy deps).
+cffi>=1.16 ; sys_platform == "win32"

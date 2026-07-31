@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dubai Estate Analytics</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;
+  --accent:#f0a500;--accent2:#2ea043;--danger:#e05c5c;
+  --text:#e6edf3;--muted:#8b949e;--radius:10px;
+  --sidebar-w:260px;--header-h:56px;
+}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+#app{display:flex;height:100vh;flex-direction:column}
+header{height:var(--header-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;padding:0 20px;flex-shrink:0;z-index:100}
+header .logo{font-size:18px;font-weight:700;color:var(--accent);white-space:nowrap}
+header .logo span{color:var(--text);font-weight:400}
+header .nav-tabs{display:flex;gap:4px;margin-left:24px}
+header .nav-tabs button{background:none;border:none;color:var(--muted);cursor:pointer;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;transition:all .15s}
+header .nav-tabs button:hover{background:var(--surface2);color:var(--text)}
+header .nav-tabs button.active{background:var(--surface2);color:var(--accent)}
+header .spacer{flex:1}
+#coverage-pill{font-size:12px;padding:4px 10px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);white-space:nowrap}
+#coverage-pill .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent2);margin-right:5px;vertical-align:middle}
+#body{display:flex;flex:1;overflow:hidden}
+#sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+#sidebar .sidebar-title{padding:14px 16px 10px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+#sidebar .filter-group{padding:0 12px 10px}
+#sidebar label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+#sidebar select,#sidebar input[type=text]{width:100%;padding:7px 10px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;outline:none}
+#sidebar select:focus,#sidebar input:focus{border-color:var(--accent)}
+#sidebar .metric-cards{padding:0 12px 12px;display:flex;flex-direction:column;gap:8px}
+.stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px}
+.stat-card .sc-label{font-size:11px;color:var(--muted);margin-bottom:3px}
+.stat-card .sc-value{font-size:20px;font-weight:700;color:var(--text)}
+.stat-card .sc-sub{font-size:11px;color:var(--muted);margin-top:2px}
+#sidebar .divider{border:none;border-top:1px solid var(--border);margin:4px 12px}
+#sidebar .area-list-wrap{flex:1;overflow-y:auto;padding:0 12px 12px}
+#sidebar .area-list-wrap::-webkit-scrollbar{width:4px}
+#sidebar .area-list-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.area-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:6px;cursor:pointer;transition:background .12s;gap:8px}
+.area-item:hover{background:var(--surface2)}
+.area-item.selected{background:rgba(240,165,0,.1);border:1px solid rgba(240,165,0,.3)}
+.area-item .ai-rank{width:20px;font-size:11px;color:var(--muted);flex-shrink:0;text-align:right}
+.area-item .ai-name{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.area-item .ai-val{font-size:12px;font-weight:600;color:var(--accent);flex-shrink:0}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.page{flex:1;overflow:hidden;display:none}
+.page.active{display:flex}
+#page-map{position:relative}
+#map{width:100%;height:100%}
+#map-legend{position:absolute;bottom:24px;right:12px;z-index:1000;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;min-width:160px}
+#map-legend .leg-title{font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:600;text-transform:uppercase}
+.leg-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px}
+.leg-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0}
+#map-controls{position:absolute;top:12px;left:12px;z-index:1000;display:flex;flex-direction:column;gap:8px}
+#map-controls select{padding:7px 10px;border-radius:6px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:13px;outline:none;min-width:180px}
+#map-controls select:focus{border-color:var(--accent)}
+.leaflet-container{background:#1a1e27}
+#page-ranking{flex-direction:column;overflow:hidden}
+.ranking-toolbar{padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.ranking-toolbar label{font-size:12px;color:var(--muted);margin-right:4px}
+.ranking-toolbar select{padding:6px 10px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;outline:none}
+.ranking-toolbar select:focus{border-color:var(--accent)}
+#ranking-table-wrap{flex:1;overflow-y:auto;padding:0 20px 20px}
+#ranking-table-wrap::-webkit-scrollbar{width:5px}
+#ranking-table-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.rtable{width:100%;border-collapse:collapse;margin-top:16px}
+.rtable th{text-align:left;padding:10px 12px;font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:2}
+.rtable td{padding:10px 12px;border-bottom:1px solid rgba(48,54,61,.5);vertical-align:middle}
+.rtable tr:hover td{background:var(--surface2)}
+.rtable .rank-num{color:var(--muted);font-size:12px;width:40px}
+.rtable .name-cell{font-weight:500}
+.rtable .num-cell{text-align:right;font-variant-numeric:tabular-nums;font-size:13px}
+.rtable .num-cell.highlight{color:var(--accent);font-weight:600}
+.rtable .bar-cell{width:120px}
+.bar-bg{background:var(--surface2);border-radius:3px;height:6px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;background:var(--accent);transition:width .3s}
+.rtable tr{cursor:pointer}
+.rtable tr:hover .name-cell{color:var(--accent)}
+#page-growth{flex-direction:column;overflow:hidden}
+.growth-toolbar{padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.growth-toolbar input[type=text]{padding:7px 12px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;outline:none;width:240px}
+.growth-toolbar input:focus{border-color:var(--accent)}
+.growth-toolbar select{padding:7px 10px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;outline:none}
+.btn{padding:7px 16px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:500;background:var(--accent);color:#000;transition:opacity .15s}
+.btn:hover{opacity:.85}
+.btn.secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+#growth-content{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:20px}
+#growth-content::-webkit-scrollbar{width:5px}
+#growth-content::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.growth-header{display:flex;gap:12px;flex-wrap:wrap}
+.metric-pill{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 18px;min-width:160px}
+.metric-pill .mp-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.metric-pill .mp-value{font-size:22px;font-weight:700;margin-top:2px}
+.metric-pill .mp-value.pos{color:var(--accent2)}
+.metric-pill .mp-value.neg{color:var(--danger)}
+.metric-pill .mp-value.neutral{color:var(--accent)}
+.metric-pill .mp-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px}
+.chart-card .card-title{font-size:13px;font-weight:600;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:.06em}
+.chart-wrap{position:relative}
+.yoy-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.yoy-chip{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;min-width:100px}
+.yoy-chip .yy{font-size:12px;color:var(--muted)}
+.yoy-chip .yv{font-size:15px;font-weight:600;margin:2px 0}
+.yoy-chip .ych{font-size:12px}
+.ych.pos{color:var(--accent2)}
+.ych.neg{color:var(--danger)}
+.ych.flat{color:var(--muted)}
+.caveat-box{background:rgba(240,165,0,.06);border:1px solid rgba(240,165,0,.2);border-radius:var(--radius);padding:12px 16px;font-size:12px;color:var(--muted);line-height:1.6}
+.caveat-box strong{color:var(--accent)}
+#page-compare{flex-direction:column;overflow:hidden}
+.compare-toolbar{padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.compare-toolbar input[type=text]{padding:7px 12px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;outline:none;width:340px}
+.compare-toolbar input:focus{border-color:var(--accent)}
+.compare-toolbar select{padding:7px 10px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;outline:none}
+#compare-content{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:20px}
+#compare-content::-webkit-scrollbar{width:5px}
+#compare-content::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.compare-cards{display:flex;gap:14px;flex-wrap:wrap}
+.compare-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;flex:1;min-width:200px}
+.compare-card .cc-name{font-size:15px;font-weight:700;margin-bottom:12px}
+.compare-card .cc-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)}
+.compare-card .cc-row:last-child{border-bottom:none}
+.compare-card .cc-key{font-size:12px;color:var(--muted)}
+.compare-card .cc-val{font-size:13px;font-weight:600}
+#page-transactions{flex-direction:column;overflow:hidden}
+.txn-toolbar{padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.txn-toolbar input,.txn-toolbar select{padding:7px 10px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;outline:none}
+.txn-toolbar input:focus,.txn-toolbar select:focus{border-color:var(--accent)}
+#txn-table-wrap{flex:1;overflow-y:auto;padding:0 20px 20px}
+#txn-table-wrap::-webkit-scrollbar{width:5px}
+#txn-table-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.txn-table{width:100%;border-collapse:collapse;margin-top:14px}
+.txn-table th{text-align:left;padding:10px 12px;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:2}
+.txn-table td{padding:9px 12px;border-bottom:1px solid rgba(48,54,61,.4);font-size:13px;vertical-align:middle}
+.txn-table tr:hover td{background:var(--surface2)}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500}
+.badge.sale{background:rgba(46,160,67,.15);color:var(--accent2)}
+.badge.rent{background:rgba(240,165,0,.15);color:var(--accent)}
+.badge.mortgage{background:rgba(130,80,255,.15);color:#a78bfa}
+.badge.offplan{background:rgba(224,92,92,.15);color:var(--danger)}
+.badge.gov{background:rgba(46,160,67,.1);color:var(--accent2);border:1px solid rgba(46,160,67,.3)}
+.loading{display:flex;align-items:center;justify-content:center;flex:1;color:var(--muted);font-size:14px;flex-direction:column;gap:10px}
+.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty-state{display:flex;align-items:center;justify-content:center;flex:1;color:var(--muted);flex-direction:column;gap:8px;padding:40px}
+.empty-state .es-icon{font-size:40px;opacity:.3}
+.empty-state .es-title{font-size:15px;font-weight:600;color:var(--text)}
+.empty-state .es-sub{font-size:13px;text-align:center;max-width:320px;line-height:1.5}
+.no-data{color:var(--muted);font-size:12px}
+.tip{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;pointer-events:none;z-index:9999;min-width:160px;max-width:260px;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+.tip .tip-title{font-weight:700;font-size:13px;margin-bottom:6px}
+.tip .tip-row{display:flex;justify-content:space-between;gap:12px;padding:2px 0}
+.tip .tip-key{color:var(--muted)}
+.tip .tip-val{font-weight:600}
+.pagination{display:flex;gap:8px;align-items:center;padding:12px 20px;border-top:1px solid var(--border)}
+.pagination button{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-size:13px}
+.pagination button:hover{border-color:var(--accent)}
+.pagination button:disabled{opacity:.4;cursor:default}
+.pagination .page-info{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">&#127963; Dubai <span>Estate</span></div>
+    <nav class="nav-tabs">
+      <button class="active" onclick="setPage('map')">Map</button>
+      <button onclick="setPage('ranking')">Rankings</button>
+      <button onclick="setPage('growth')">Growth</button>
+      <button onclick="setPage('compare')">Compare</button>
+      <button onclick="setPage('transactions')">Transactions</button>
+    </nav>
+    <div class="spacer"></div>
+    <a href="pricing-history.html" title="Bayut asking-price history 2016–current (works without the API)"
+       style="font-size:12px;color:var(--muted);padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);text-decoration:none;margin-right:8px">📈 Pricing History</a>
+    <a href="ai-assistant.html" title="AI market assistant — summarize, compare, find deals, ask questions (needs the AI proxy task running)"
+       style="font-size:12px;color:var(--muted);padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);text-decoration:none;margin-right:8px">✦ AI Assistant</a>
+    <div id="coverage-pill"><span class="dot"></span><span id="coverage-text">loading&#8230;</span></div>
+  </header>
+  <div id="body">
+    <aside id="sidebar">
+      <div class="sidebar-title">Filters</div>
+      <div class="filter-group">
+        <label>Usage type</label>
+        <select id="sb-usage"><option value="">All usages</option></select>
+      </div>
+      <div class="filter-group">
+        <label>Metric</label>
+        <select id="sb-metric">
+          <option value="total_return">Total Return</option>
+          <option value="capital_growth">Capital Growth (CAGR)</option>
+          <option value="gross_yield">Gross Yield</option>
+          <option value="sale_price_m2">Sale Price / m&#178;</option>
+          <option value="rent_m2">Rent / m&#178; / yr</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Sort</label>
+        <select id="sb-order">
+          <option value="desc">Highest first</option>
+          <option value="asc">Lowest first</option>
+        </select>
+      </div>
+      <hr class="divider" />
+      <div class="metric-cards">
+        <div class="stat-card">
+          <div class="sc-label">Sale Transactions</div>
+          <div class="sc-value" id="st-txn">&#8212;</div>
+          <div class="sc-sub" id="st-txn-range">loading&#8230;</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-label">Rent Contracts</div>
+          <div class="sc-value" id="st-rent">&#8212;</div>
+          <div class="sc-sub" id="st-rent-range">loading&#8230;</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-label">Areas covered</div>
+          <div class="sc-value" id="st-areas">&#8212;</div>
+          <div class="sc-sub" id="st-areas-geo">loading&#8230;</div>
+        </div>
+      </div>
+      <hr class="divider" />
+      <div class="sidebar-title" style="padding-top:8px">Top Areas</div>
+      <div class="area-list-wrap">
+        <div id="area-list"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+    </aside>
+    <main id="main">
+      <!-- MAP -->
+      <div id="page-map" class="page active">
+        <div id="map"></div>
+        <div id="map-controls">
+          <select id="map-metric-sel" onchange="refreshMap()">
+            <option value="sale_median_price_m2">Sale Price / m&#178;</option>
+            <option value="gross_yield_pct">Gross Yield %</option>
+            <option value="rent_median_annual_m2">Rent / m&#178; / yr</option>
+          </select>
+        </div>
+        <div id="map-legend">
+          <div class="leg-title" id="leg-title">Sale Price / m&#178;</div>
+          <div id="leg-rows"></div>
+        </div>
+      </div>
+      <!-- RANKING -->
+      <div id="page-ranking" class="page">
+        <div class="ranking-toolbar">
+          <div><label>Entity</label>
+            <select id="rk-entity" onchange="loadRanking()">
+              <option value="area">Areas</option>
+              <option value="project">Projects</option>
+            </select>
+          </div>
+          <div><label>Min. transactions</label>
+            <select id="rk-minsample" onchange="loadRanking()">
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="20" selected>20</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+          <div><label>Show</label>
+            <select id="rk-limit" onchange="loadRanking()">
+              <option value="25">Top 25</option>
+              <option value="50">Top 50</option>
+              <option value="100">Top 100</option>
+            </select>
+          </div>
+          <div id="rk-info" style="color:var(--muted);font-size:12px;margin-left:auto"></div>
+        </div>
+        <div id="ranking-table-wrap">
+          <div id="ranking-content"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+      <!-- GROWTH -->
+      <div id="page-growth" class="page">
+        <div class="growth-toolbar">
+          <input type="text" id="growth-q" placeholder="Search area or project name&#8230;" />
+          <select id="growth-entity">
+            <option value="area">Area</option>
+            <option value="project">Project</option>
+          </select>
+          <select id="growth-usage"><option value="">All usages</option></select>
+          <button class="btn" onclick="loadGrowth()">Analyse</button>
+          <span style="color:var(--muted);font-size:12px" id="growth-resolved"></span>
+        </div>
+        <div id="growth-content">
+          <div class="empty-state">
+            <div class="es-icon">&#128200;</div>
+            <div class="es-title">Growth Analysis</div>
+            <div class="es-sub">Search for an area or project above to see its price trend, CAGR and year-over-year changes.</div>
+          </div>
+        </div>
+      </div>
+      <!-- COMPARE -->
+      <div id="page-compare" class="page">
+        <div class="compare-toolbar">
+          <div><label style="font-size:12px;color:var(--muted);margin-right:4px">Dimension</label>
+            <select id="cmp-dim" onchange="onCompareDimChange()">
+              <option value="area">Areas</option>
+              <option value="project">Projects</option>
+            </select>
+          </div>
+          <input type="text" id="cmp-values" placeholder="e.g. Dubai Marina, Downtown Dubai" />
+          <button class="btn" onclick="loadCompare()">Compare</button>
+        </div>
+        <div id="compare-content">
+          <div class="empty-state">
+            <div class="es-icon">&#9878;&#65039;</div>
+            <div class="es-title">Side-by-Side Comparison</div>
+            <div class="es-sub">Enter two or more area or project names separated by commas and press Compare.</div>
+          </div>
+        </div>
+      </div>
+      <!-- TRANSACTIONS -->
+      <div id="page-transactions" class="page">
+        <div class="txn-toolbar">
+          <div><label style="font-size:12px;color:var(--muted);margin-right:4px">Type</label>
+            <select id="txn-type" onchange="loadTxns()">
+              <option value="transactions">Sales</option>
+              <option value="rents">Rents</option>
+            </select>
+          </div>
+          <div><label style="font-size:12px;color:var(--muted);margin-right:4px">Group</label>
+            <select id="txn-group" onchange="loadTxns()">
+              <option value="">All</option>
+              <option value="Sales">Sales</option>
+              <option value="Mortgage">Mortgage</option>
+              <option value="Gifts">Gifts</option>
+            </select>
+          </div>
+          <div><label style="font-size:12px;color:var(--muted);margin-right:4px">From</label>
+            <input type="date" id="txn-from" onchange="loadTxns()" value="2026-01-01" />
+          </div>
+          <div><label style="font-size:12px;color:var(--muted);margin-right:4px">To</label>
+            <input type="date" id="txn-to" onchange="loadTxns()" />
+          </div>
+          <button class="btn secondary" onclick="loadTxns()">Refresh</button>
+          <span id="txn-count" style="color:var(--muted);font-size:12px;margin-left:auto"></span>
+        </div>
+        <div id="txn-table-wrap">
+          <div id="txn-content"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+        <div class="pagination" id="txn-pagination" style="display:none">
+          <button id="txn-prev" onclick="txnPage(-1)">&#8592; Prev</button>
+          <span class="page-info" id="txn-page-info"></span>
+          <button id="txn-next" onclick="txnPage(1)">Next &#8594;</button>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<div class="tip" id="tooltip" style="display:none"></div>
+<script>
+const API='http://localhost:8000';
+const fmt={
+  num:v=>v==null?'\u2014':Number(v).toLocaleString('en-US',{maximumFractionDigits:0}),
+  aed:v=>v==null?'\u2014':'AED '+Number(v).toLocaleString('en-US',{maximumFractionDigits:0}),
+  pct:v=>v==null?'\u2014':Number(v).toFixed(2)+'%',
+  date:v=>v?new Date(v).toLocaleDateString('en-GB',{year:'numeric',month:'short',day:'numeric'}):'\u2014',
+  month:v=>v?new Date(v+'T00:00:00').toLocaleDateString('en-GB',{year:'numeric',month:'short'}):'\u2014',
+};
+async function api(path){
+  const r=await fetch(API+path);
+  if(!r.ok)throw new Error('HTTP '+r.status+': '+path);
+  return r.json();
+}
+function loading(el){el.innerHTML='<div class="loading"><div class="spinner"></div><span>Loading\u2026</span></div>';}
+function colorScale(val,min,max){
+  if(val==null)return '#30363d';
+  const t=Math.max(0,Math.min(1,(val-min)/(max-min||1)));
+  const r=Math.round(240-t*194),g=Math.round(165+t*35),b=Math.round(t*67);
+  return 'rgb('+r+','+g+','+b+')';
+}
+let state={usages:[],coverage:null,selectedAreaId:null,txnOffset:0,txnLimit:50,txnHasMore:false,currentPage:'map'};
+
+function setPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.nav-tabs button').forEach(b=>b.classList.toggle('active',b.textContent.trim().toLowerCase().startsWith(name)));
+  state.currentPage=name;
+  if(name==='map'&&!mapInitialized)initMap();
+  if(name==='ranking')loadRanking();
+  if(name==='transactions'&&document.getElementById('txn-content').innerHTML.includes('Loading'))loadTxns();
+}
+
+async function bootstrap(){
+  try{
+    const[cov,usages]=await Promise.all([api('/meta/coverage'),api('/dimensions/usages')]);
+    state.coverage=cov;state.usages=usages;
+    const txnRows=cov.datasets.sale_transactions.row_count;
+    document.getElementById('coverage-text').textContent=txnRows>0
+      ?fmt.num(txnRows)+' transactions \u00b7 last run '+(cov.last_successful_etl_run?fmt.date(cov.last_successful_etl_run.finished_at):'never')
+      :'No data yet \u2014 run `dxb backfill` to load data';
+    document.getElementById('st-txn').textContent=txnRows>0?fmt.num(txnRows):'0';
+    const sd=cov.datasets.sale_transactions;
+    document.getElementById('st-txn-range').textContent=sd.date_from?fmt.date(sd.date_from)+' \u2013 '+fmt.date(sd.date_to):'No data yet';
+    document.getElementById('st-rent').textContent=fmt.num(cov.datasets.rent_contracts.row_count);
+    const rd=cov.datasets.rent_contracts;
+    document.getElementById('st-rent-range').textContent=rd.date_from?fmt.date(rd.date_from)+' \u2013 '+fmt.date(rd.date_to):'No data yet';
+    document.getElementById('st-areas').textContent=fmt.num(cov.geo_coverage.areas_total);
+    document.getElementById('st-areas-geo').textContent=cov.geo_coverage.areas_with_boundary+' with boundaries';
+    const opts='<option value="">All usages</option>'+usages.map(u=>'<option value="'+u.usage+'">'+u.usage+' ('+u.property_type_count+')</option>').join('');
+    document.getElementById('sb-usage').innerHTML=opts;
+    document.getElementById('growth-usage').innerHTML=opts;
+    ['sb-usage','sb-metric','sb-order'].forEach(id=>{
+      document.getElementById(id).addEventListener('change',()=>{
+        if(state.currentPage==='map')refreshMap();
+        if(state.currentPage==='ranking')loadRanking();
+        loadSidebarList();
+      });
+    });
+    loadSidebarList();
+    initMap();
+  }catch(e){
+    document.getElementById('coverage-text').textContent='API offline';
+    document.getElementById('area-list').innerHTML='<div class="empty-state"><div class="es-icon">\u26a0\ufe0f</div><div class="es-title">API not reachable</div><div class="es-sub">Make sure the docker stack is running on localhost:8000</div></div>';
+    console.error(e);
+  }
+}
+
+async function loadSidebarList(){
+  const metric=document.getElementById('sb-metric').value;
+  const usage=document.getElementById('sb-usage').value;
+  const order=document.getElementById('sb-order').value;
+  const el=document.getElementById('area-list');
+  el.innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  try{
+    let url='/analytics/area-ranking?metric='+metric+'&limit=20&ascending='+(order==='asc')+'&min_sample=5';
+    if(usage)url+='&usage='+encodeURIComponent(usage);
+    const data=await api(url);
+    if(!data.items.length){el.innerHTML='<div style="padding:12px;color:var(--muted);font-size:12px">No data \u2014 load transactions first.</div>';return;}
+    el.innerHTML=data.items.map((item,i)=>{
+      const v=item[data.metric_field];
+      const isPct=['capital_growth_cagr_pct','gross_rental_yield_pct','gross_total_return_pct'].includes(data.metric_field);
+      const displayVal=isPct?fmt.pct(v):('AED '+fmt.num(v));
+      return '<div class="area-item'+(item.id===state.selectedAreaId?' selected':'')+'" onclick="selectArea('+item.id+',\''+item.name_en.replace(/'/g,"\\'")+'\')">'
+        +'<span class="ai-rank">'+(i+1)+'</span>'
+        +'<span class="ai-name" title="'+item.name_en+'">'+item.name_en+'</span>'
+        +'<span class="ai-val">'+displayVal+'</span></div>';
+    }).join('');
+  }catch(e){el.innerHTML='<div style="padding:12px;color:var(--muted);font-size:12px">No data yet.</div>';}
+}
+
+function selectArea(id,name){
+  state.selectedAreaId=id;
+  document.querySelectorAll('.area-item').forEach(el=>el.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  document.getElementById('growth-q').value=name;
+  document.getElementById('growth-entity').value='area';
+  setPage('growth');loadGrowth();
+}
+
+let map,mapInitialized=false,geoLayer=null;
+function initMap(){
+  if(mapInitialized)return;
+  mapInitialized=true;
+  map=L.map('map',{center:[25.2048,55.2708],zoom:11,zoomControl:true});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; CARTO',maxZoom:19}).addTo(map);
+  refreshMap();
+}
+const metricLabels={'sale_median_price_m2':'Sale Price / m\u00b2','gross_yield_pct':'Gross Yield %','rent_median_annual_m2':'Rent / m\u00b2 / yr'};
+async function refreshMap(){
+  if(!mapInitialized)return;
+  const metricKey=document.getElementById('map-metric-sel').value;
+  const usage=document.getElementById('sb-usage').value;
+  try{
+    let url='/geo/areas?geo_level=polygon';
+    if(usage)url+='&usage='+encodeURIComponent(usage);
+    const geo=await api(url);
+    if(geoLayer){map.removeLayer(geoLayer);geoLayer=null;}
+    if(!geo.features.length){document.getElementById('leg-rows').innerHTML='<div style="color:var(--muted);font-size:11px">No geo data yet</div>';return;}
+    const vals=geo.features.map(f=>f.properties[metricKey]).filter(v=>v!=null);
+    if(!vals.length){document.getElementById('leg-rows').innerHTML='<div style="color:var(--muted);font-size:11px">No metric data yet</div>';return;}
+    const minV=Math.min(...vals),maxV=Math.max(...vals);
+    document.getElementById('leg-title').textContent=metricLabels[metricKey]||metricKey;
+    let legHtml='';
+    for(let i=5;i>=0;i--){
+      const v=minV+(maxV-minV)*i/5;
+      const col=colorScale(v,minV,maxV);
+      const label=metricKey.includes('yield')?fmt.pct(v):('AED '+fmt.num(v));
+      legHtml+='<div class="leg-row"><div class="leg-swatch" style="background:'+col+'"></div><span>'+label+'</span></div>';
+    }
+    document.getElementById('leg-rows').innerHTML=legHtml;
+    geoLayer=L.geoJSON(geo,{
+      style:f=>{
+        const v=f.properties[metricKey];
+        return{fillColor:colorScale(v,minV,maxV),weight:1,opacity:0.7,color:'#1a1e27',fillOpacity:v!=null?0.75:0.15};
+      },
+      onEachFeature:(f,layer)=>{
+        const p=f.properties;
+        layer.on({
+          mouseover:e=>{
+            layer.setStyle({weight:2,fillOpacity:0.9});
+            const tt=document.getElementById('tooltip');
+            const v=p[metricKey];
+            const dv=metricKey.includes('yield')?fmt.pct(v):(v?'AED '+fmt.num(v):'\u2014');
+            tt.innerHTML='<div class="tip-title">'+p.name_en+'</div>'
+              +'<div class="tip-row"><span class="tip-key">'+metricLabels[metricKey]+'</span><span class="tip-val">'+dv+'</span></div>'
+              +(p.sale_cnt!=null?'<div class="tip-row"><span class="tip-key">Sales</span><span class="tip-val">'+fmt.num(p.sale_cnt)+'</span></div>':'')
+              +(p.metric_month?'<div class="tip-row"><span class="tip-key">Month</span><span class="tip-val">'+fmt.month(p.metric_month)+'</span></div>':'');
+            tt.style.display='block';
+          },
+          mousemove:e=>{const tt=document.getElementById('tooltip');tt.style.left=(e.originalEvent.pageX+14)+'px';tt.style.top=(e.originalEvent.pageY-28)+'px';},
+          mouseout:e=>{
+            const v=p[metricKey];
+            layer.setStyle({weight:1,fillOpacity:v!=null?0.75:0.15});
+            document.getElementById('tooltip').style.display='none';
+          },
+          click:()=>{document.getElementById('growth-q').value=p.name_en;document.getElementById('growth-entity').value='area';setPage('growth');loadGrowth();}
+        });
+      }
+    }).addTo(map);
+  }catch(e){console.error('Map error',e);}
+}
+
+async function loadRanking(){
+  const metric=document.getElementById('sb-metric').value;
+  const usage=document.getElementById('sb-usage').value;
+  const order=document.getElementById('sb-order').value;
+  const entity=document.getElementById('rk-entity').value;
+  const minSample=document.getElementById('rk-minsample').value;
+  const limit=document.getElementById('rk-limit').value;
+  const el=document.getElementById('ranking-content');
+  loading(el);
+  try{
+    let url='/analytics/area-ranking?entity='+entity+'&metric='+metric+'&limit='+limit+'&ascending='+(order==='asc')+'&min_sample='+minSample;
+    if(usage)url+='&usage='+encodeURIComponent(usage);
+    const data=await api(url);
+    document.getElementById('rk-info').textContent=data.entities_considered+' entities \u00b7 '+data.entities_excluded_insufficient_data+' excluded (insufficient data)';
+    if(!data.items.length){
+      el.innerHTML='<div class="empty-state"><div class="es-icon">\ud83d\udcca</div><div class="es-title">No data</div><div class="es-sub">Load transactions first using `dxb backfill`.</div></div>';
+      return;
+    }
+    const mf=data.metric_field;
+    const maxVal=Math.max(...data.items.map(i=>Math.abs(i[mf]??0)));
+    const isPct=['capital_growth_cagr_pct','gross_rental_yield_pct','gross_total_return_pct'].includes(mf);
+    let html='<table class="rtable"><thead><tr><th>Rank</th><th>Name</th><th>'+mf.replace(/_/g,' ')+'</th><th>Sale AED/m\u00b2</th><th>Yield %</th><th>CAGR %</th><th>Sample</th><th></th></tr></thead><tbody>';
+    data.items.forEach((item,i)=>{
+      const mainVal=item[mf];
+      const barW=maxVal>0?Math.round(Math.abs(mainVal??0)/maxVal*100):0;
+      const isNeg=(mainVal??0)<0;
+      const fv=isPct?fmt.pct(mainVal):fmt.num(mainVal);
+      html+='<tr onclick="jumpToGrowth('+item.id+',\''+item.name_en.replace(/'/g,"\\'")+'\',\''+entity+'\')">'
+        +'<td class="num-cell rank-num">'+(i+1)+'</td>'
+        +'<td class="name-cell">'+item.name_en+'</td>'
+        +'<td class="num-cell highlight">'+fv+'</td>'
+        +'<td class="num-cell">'+fmt.num(item.median_sale_aed_m2)+'</td>'
+        +'<td class="num-cell">'+fmt.pct(item.gross_rental_yield_pct)+'</td>'
+        +'<td class="num-cell">'+fmt.pct(item.capital_growth_cagr_pct)+'</td>'
+        +'<td class="num-cell">'+fmt.num(item.sale_sample_size)+'</td>'
+        +'<td class="bar-cell"><div class="bar-bg"><div class="bar-fill" style="width:'+barW+'%;background:'+(isNeg?'var(--danger)':'var(--accent)')+'"></div></div></td>'
+        +'</tr>';
+    });
+    el.innerHTML=html+'</tbody></table>';
+  }catch(e){el.innerHTML='<div class="empty-state"><div class="es-icon">\u26a0\ufe0f</div><div class="es-title">Error</div><div class="es-sub">'+e.message+'</div></div>';}
+}
+
+function jumpToGrowth(id,name,entity){
+  document.getElementById('growth-q').value=name;
+  document.getElementById('growth-entity').value=entity;
+  setPage('growth');loadGrowth();
+}
+
+let priceChartInst=null,rentChartInst=null;
+async function loadGrowth(){
+  const q=document.getElementById('growth-q').value.trim();
+  const entity=document.getElementById('growth-entity').value;
+  const usage=document.getElementById('growth-usage').value;
+  const el=document.getElementById('growth-content');
+  if(!q){el.innerHTML='<div class="empty-state"><div class="es-icon">\ud83d\udcc8</div><div class="es-title">Growth Analysis</div><div class="es-sub">Search for an area or project above.</div></div>';return;}
+  loading(el);
+  try{
+    let url='/analytics/growth?entity='+entity+'&q='+encodeURIComponent(q)+'&min_sample=3';
+    if(usage)url+='&usage='+encodeURIComponent(usage);
+    const d=await api(url);
+    document.getElementById('growth-resolved').textContent=d.name_en?'Showing: '+d.name_en:'';
+    if(!d.series.length){el.innerHTML='<div class="empty-state"><div class="es-icon">\ud83d\udd0d</div><div class="es-title">No data found</div><div class="es-sub">No mart rows for this entity. Try relaxing the usage filter.</div></div>';return;}
+    const cg=d.capital_growth_cagr_pct,gy=d.gross_rental_yield_pct,tr=d.gross_total_return_pct;
+    el.innerHTML=
+      '<div class="growth-header">'
+      +'<div class="metric-pill"><div class="mp-label">Capital Growth (CAGR)</div><div class="mp-value '+(cg==null?'neutral':cg>=0?'pos':'neg')+'">'+fmt.pct(cg)+'</div><div class="mp-sub">'+(d.years!=null?'over '+d.years.toFixed(1)+' yrs':'')+'</div></div>'
+      +'<div class="metric-pill"><div class="mp-label">Gross Yield</div><div class="mp-value '+(gy==null?'neutral':'pos')+'">'+fmt.pct(gy)+'</div><div class="mp-sub">before fees &amp; vacancy</div></div>'
+      +'<div class="metric-pill"><div class="mp-label">Gross Total Return</div><div class="mp-value '+(tr==null?'neutral':tr>=0?'pos':'neg')+'">'+fmt.pct(tr)+'</div><div class="mp-sub">income + capital</div></div>'
+      +'<div class="metric-pill"><div class="mp-label">YoY Streak</div><div class="mp-value neutral">'+d.consecutive_yoy_increases+' yr'+(d.consecutive_yoy_increases!==1?'s':'')+'</div><div class="mp-sub">consecutive rises</div></div>'
+      +'<div class="metric-pill"><div class="mp-label">Data Range</div><div class="mp-value neutral" style="font-size:14px">'+fmt.month(d.month_from)+'</div><div class="mp-sub">to '+fmt.month(d.month_to)+' \u00b7 '+d.months_covered+' months</div></div>'
+      +'</div>'
+      +'<div class="chart-card"><div class="card-title">Sale Price \u2014 Median AED/m\u00b2 per Month</div><div class="chart-wrap" style="height:220px"><canvas id="priceChart"></canvas></div></div>'
+      +'<div class="chart-card"><div class="card-title">Rent \u2014 Median AED/m\u00b2/year per Month</div><div class="chart-wrap" style="height:180px"><canvas id="rentChart"></canvas></div></div>'
+      +'<div class="chart-card"><div class="card-title">Year-over-Year Steps</div><div class="yoy-grid" id="yoy-grid"></div></div>'
+      +'<div class="caveat-box"><strong>Methodology:</strong> '+d.methodology+'<br/><br/><strong>Caveats:</strong> '+d.caveats.slice(0,2).join(' \u00b7 ')+'</div>';
+    document.getElementById('yoy-grid').innerHTML=d.yoy.map(s=>{
+      const ch=s.yoy_change_pct,cls=ch==null?'flat':ch>0?'pos':'neg',arrow=ch==null?'':ch>0?'\u25b2 ':'\u25bc ';
+      return '<div class="yoy-chip"><div class="yy">'+s.year+'</div><div class="yv">'+(s.value_aed_m2?'AED '+fmt.num(s.value_aed_m2):'\u2014')+'</div><div class="ych '+cls+'">'+(ch!=null?arrow+Math.abs(ch).toFixed(1)+'%':'\u2014')+'</div></div>';
+    }).join('');
+    const labels=d.series.map(s=>s.month),prices=d.series.map(s=>s.sale_median_price_m2),rents=d.series.map(s=>s.rent_median_annual_m2);
+    if(priceChartInst)priceChartInst.destroy();
+    priceChartInst=new Chart(document.getElementById('priceChart'),{type:'line',data:{labels,datasets:[{label:'Median AED/m\u00b2',data:prices,borderColor:'#f0a500',backgroundColor:'rgba(240,165,0,.08)',borderWidth:2,pointRadius:0,fill:true,tension:.3,spanGaps:true}]},options:chartOpts('AED/m\u00b2')});
+    if(rentChartInst)rentChartInst.destroy();
+    rentChartInst=new Chart(document.getElementById('rentChart'),{type:'line',data:{labels,datasets:[{label:'Rent AED/m\u00b2/yr',data:rents,borderColor:'#2ea043',backgroundColor:'rgba(46,160,67,.08)',borderWidth:2,pointRadius:0,fill:true,tension:.3,spanGaps:true}]},options:chartOpts('AED/m\u00b2/yr')});
+  }catch(e){el.innerHTML='<div class="empty-state"><div class="es-icon">\u26a0\ufe0f</div><div class="es-title">Error</div><div class="es-sub">'+e.message+'</div></div>';}
+}
+
+function chartOpts(yLabel){
+  return{responsive:true,maintainAspectRatio:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c2128',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',
+      callbacks:{label:ctx=>' '+yLabel+': '+(ctx.parsed.y!=null?fmt.num(ctx.parsed.y):'\u2014'),title:ctx=>fmt.month(ctx[0].label)}}},
+    scales:{x:{ticks:{color:'#8b949e',maxTicksLimit:12,maxRotation:0,callback:(_,i,all)=>fmt.month(all[i]?.label??'')},grid:{color:'rgba(48,54,61,.5)'}},
+      y:{ticks:{color:'#8b949e',callback:v=>fmt.num(v)},grid:{color:'rgba(48,54,61,.5)'}}}};
+}
+
+let compareChartInst=null;
+function onCompareDimChange(){
+  const dim=document.getElementById('cmp-dim').value;
+  document.getElementById('cmp-values').placeholder=dim==='area'?'e.g. Dubai Marina, Downtown Dubai, Palm Jumeirah':'e.g. Burj Khalifa, Marina Gate, JVC';
+}
+async function loadCompare(){
+  const dim=document.getElementById('cmp-dim').value;
+  const raw=document.getElementById('cmp-values').value;
+  const values=raw.split(',').map(v=>v.trim()).filter(Boolean);
+  const el=document.getElementById('compare-content');
+  if(!values.length)return;
+  loading(el);
+  try{
+    const url='/analytics/compare?dimension='+dim+'&values='+encodeURIComponent(values.join(','));
+    const data=await api(url);
+    if(!data.groups.length){el.innerHTML='<div class="empty-state"><div class="es-icon">\u2696\ufe0f</div><div class="es-title">No data</div><div class="es-sub">No matching data found.</div></div>';return;}
+    const colors=['#f0a500','#2ea043','#a78bfa','#60a5fa','#fb923c','#f472b6'];
+    const cardsHtml=data.groups.map((g,i)=>'<div class="compare-card"><div class="cc-name" style="color:'+colors[i%colors.length]+'">'+(g.name_en||g.value)+'</div>'
+      +'<div class="cc-row"><span class="cc-key">Total Return</span><span class="cc-val">'+fmt.pct(g.gross_total_return_pct)+'</span></div>'
+      +'<div class="cc-row"><span class="cc-key">CAGR (Capital)</span><span class="cc-val">'+fmt.pct(g.capital_growth_cagr_pct)+'</span></div>'
+      +'<div class="cc-row"><span class="cc-key">Gross Yield</span><span class="cc-val">'+fmt.pct(g.gross_rental_yield_pct)+'</span></div>'
+      +'<div class="cc-row"><span class="cc-key">Sale AED/m\u00b2</span><span class="cc-val">'+fmt.num(g.median_sale_aed_m2)+'</span></div>'
+      +'<div class="cc-row"><span class="cc-key">Rent AED/m\u00b2/yr</span><span class="cc-val">'+fmt.num(g.median_rent_aed_m2_year)+'</span></div>'
+      +'<div class="cc-row"><span class="cc-key">Data span</span><span class="cc-val">'+(g.months_covered??'\u2014')+' months</span></div></div>').join('');
+    el.innerHTML='<div class="compare-cards">'+cardsHtml+'</div>'
+      +'<div class="chart-card"><div class="card-title">Metric Comparison</div><div class="chart-wrap" style="height:280px"><canvas id="compareChart"></canvas></div></div>'
+      +'<div class="caveat-box"><strong>Gross, not net.</strong> '+data.caveats[0]+'</div>';
+    const metrics=[{key:'gross_total_return_pct',label:'Total Return %'},{key:'capital_growth_cagr_pct',label:'CAGR %'},{key:'gross_rental_yield_pct',label:'Gross Yield %'}];
+    if(compareChartInst)compareChartInst.destroy();
+    compareChartInst=new Chart(document.getElementById('compareChart'),{
+      type:'bar',
+      data:{labels:metrics.map(m=>m.label),datasets:data.groups.map((g,i)=>({label:g.name_en||g.value,data:metrics.map(m=>g[m.key]??null),backgroundColor:colors[i%colors.length]+'cc',borderColor:colors[i%colors.length],borderWidth:1,borderRadius:4}))},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8b949e',boxWidth:12}},tooltip:{backgroundColor:'#1c2128',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',callbacks:{label:ctx=>' '+ctx.dataset.label+': '+fmt.pct(ctx.parsed.y)}}},
+        scales:{x:{ticks:{color:'#8b949e'},grid:{color:'rgba(48,54,61,.5)'}},y:{ticks:{color:'#8b949e',callback:v=>fmt.pct(v)},grid:{color:'rgba(48,54,61,.5)'}}}}
+    });
+  }catch(e){el.innerHTML='<div class="empty-state"><div class="es-icon">\u26a0\ufe0f</div><div class="es-title">Error</div><div class="es-sub">'+e.message+'</div></div>';}
+}
+
+async function loadTxns(resetOffset=true){
+  if(resetOffset)state.txnOffset=0;
+  const type=document.getElementById('txn-type').value;
+  const group=document.getElementById('txn-group').value;
+  // Always include a date bound (required by the API to use an index).
+  // Default to current year if the user hasn't set a date.
+  const thisYear=new Date().getFullYear();
+  const from=document.getElementById('txn-from').value||(thisYear+'-01-01');
+  const to=document.getElementById('txn-to').value;
+  const el=document.getElementById('txn-content');
+  loading(el);
+  try{
+    let url='/facts/'+type+'?limit='+state.txnLimit+'&offset='+state.txnOffset;
+    if(type==='transactions'&&group)url+='&txn_group='+encodeURIComponent(group);
+    url+='&date_from='+from;
+    if(to)url+='&date_to='+to;
+    const data=await api(url);
+    state.txnHasMore=data.has_more;
+    const pg=document.getElementById('txn-pagination');
+    document.getElementById('txn-count').textContent=data.items.length+' rows shown';
+    if(!data.items.length){el.innerHTML='<div class="empty-state"><div class="es-icon">\ud83d\udccb</div><div class="es-title">No transactions</div><div class="es-sub">Adjust filters or load data first.</div></div>';pg.style.display='none';return;}
+    const cur=Math.floor(state.txnOffset/state.txnLimit)+1;
+    document.getElementById('txn-page-info').textContent='Page '+cur;
+    document.getElementById('txn-prev').disabled=state.txnOffset===0;
+    document.getElementById('txn-next').disabled=!state.txnHasMore;
+    pg.style.display='flex';
+    let html='';
+    if(type==='transactions'){
+      html='<table class="txn-table"><thead><tr><th>Date</th><th>Area</th><th>Project</th><th>Usage</th><th>Group</th><th>Area m\u00b2</th><th style="text-align:right">Amount AED</th><th style="text-align:right">AED/m\u00b2</th><th>Src</th></tr></thead><tbody>';
+      data.items.forEach(t=>{
+        html+='<tr><td>'+fmt.date(t.txn_date)+'</td><td>'+( t.area_name_en||'\u2014')+'</td>'
+          +'<td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+(t.project_name_en||'')+'">'+(t.project_name_en||'\u2014')+'</td>'
+          +'<td>'+(t.usage||'\u2014')+'</td>'
+          +'<td><span class="badge '+(t.txn_group==='Sales'?'sale':t.txn_group==='Mortgage'?'mortgage':'rent')+'">'+t.txn_group+'</span>'+(t.is_offplan?' <span class="badge offplan">Off-plan</span>':'')+'</td>'
+          +'<td style="text-align:right">'+fmt.num(t.actual_area_m2)+'</td>'
+          +'<td style="text-align:right;font-weight:600">'+fmt.aed(t.amount_aed)+'</td>'
+          +'<td style="text-align:right">'+fmt.num(t.price_per_m2)+'</td>'
+          +'<td>'+(t.is_government?'<span class="badge gov">Gov</span>':'')+'</td></tr>';
+      });
+      html+='</tbody></table>';
+    }else{
+      html='<table class="txn-table"><thead><tr><th>Start</th><th>End</th><th>Area</th><th>Project</th><th>Usage</th><th>Area m\u00b2</th><th style="text-align:right">Annual AED</th><th style="text-align:right">AED/m\u00b2/yr</th><th>Version</th></tr></thead><tbody>';
+      data.items.forEach(r=>{
+        html+='<tr><td>'+fmt.date(r.start_date)+'</td><td>'+fmt.date(r.end_date)+'</td>'
+          +'<td>'+(r.area_name_en||'\u2014')+'</td>'
+          +'<td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(r.project_name_en||'\u2014')+'</td>'
+          +'<td>'+(r.usage||'\u2014')+'</td>'
+          +'<td style="text-align:right">'+fmt.num(r.actual_area_m2)+'</td>'
+          +'<td style="text-align:right;font-weight:600">'+fmt.aed(r.annual_amount_aed)+'</td>'
+          +'<td style="text-align:right">'+fmt.num(r.rent_per_m2_year)+'</td>'
+          +'<td><span class="badge '+(r.version==='New'?'sale':'rent')+'">'+(r.version||'\u2014')+'</span></td></tr>';
+      });
+      html+='</tbody></table>';
+    }
+    el.innerHTML=html;
+  }catch(e){el.innerHTML='<div class="empty-state"><div class="es-icon">\u26a0\ufe0f</div><div class="es-title">Error</div><div class="es-sub">'+e.message+'</div></div>';}
+}
+function txnPage(dir){state.txnOffset=Math.max(0,state.txnOffset+dir*state.txnLimit);loadTxns(false);}
+bootstrap();
+</script>
+</body>
+</html>

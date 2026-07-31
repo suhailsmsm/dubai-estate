@@ -1,0 +1,12 @@
+# The build context is the repo root (both services need packages/dxb-core),
+# so keep the heavy, irrelevant, and secret paths out of it.
+.git
+.env
+data/
+docs/
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/uv.lock

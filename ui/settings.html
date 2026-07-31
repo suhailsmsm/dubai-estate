@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Settings · Dubai Estate Analytics</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;
+  --accent:#f0a500;--accent2:#2ea043;--danger:#e05c5c;--info:#58a6ff;--ai:#a371f7;
+  --text:#e6edf3;--muted:#8b949e;--radius:10px;
+}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+button,input,select{font-family:inherit}
+.wrap{max-width:680px;margin:0 auto;padding:36px 24px 60px}
+header{display:flex;align-items:center;gap:14px;margin-bottom:28px}
+.logo{font-size:18px;font-weight:700;color:var(--ai)}
+.logo::before{content:'✦ ';color:var(--accent)}
+.logo span{color:var(--text);font-weight:400}
+.back{font-size:13px;color:var(--muted);padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;text-decoration:none;margin-left:auto}
+.back:hover{color:var(--text);border-color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:18px}
+.card h2{font-size:16px;margin-bottom:4px}
+.card .hint{font-size:12px;color:var(--muted);margin-bottom:18px;line-height:1.6}
+.status-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);margin-bottom:18px;font-size:13px}
+.dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.dot.ok{background:var(--accent2)}.dot.bad{background:var(--danger)}.dot.warn{background:var(--accent)}
+.status-row .lbl{color:var(--muted)}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600}
+.field .sub{font-weight:400;color:var(--muted);font-size:11px}
+.field input,.field select{width:100%;padding:10px 12px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:14px;outline:none}
+.field input:focus,.field select:focus{border-color:var(--ai)}
+.field input::placeholder{color:#6e7681}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:560px){.row2{grid-template-columns:1fr}}
+.presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.preset{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-size:12px;text-align:left;flex:1;min-width:160px}
+.preset:hover{border-color:var(--ai)}
+.preset .pn{font-weight:600;display:block}
+.preset .pd{color:var(--muted);font-size:11px;margin-top:2px}
+.actions{display:flex;gap:10px;align-items:center;margin-top:8px}
+.btn{padding:11px 20px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:600}
+.btn.primary{background:var(--ai);color:#fff}
+.btn.primary:hover{opacity:.9}
+.btn.primary:disabled{opacity:.5;cursor:not-allowed}
+.btn.ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.test-result{font-size:13px;margin-top:12px;padding:0}
+.test-result.ok{color:var(--accent2)}
+.test-result.bad{color:var(--danger)}
+.test-result.spin{color:var(--muted)}
+.note{font-size:12px;color:var(--muted);line-height:1.7;padding:14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-top:14px}
+.note code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:11px}
+.saved-flash{position:fixed;top:20px;right:20px;background:var(--accent2);color:#000;padding:10px 18px;border-radius:8px;font-weight:600;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:99}
+.saved-flash.show{opacity:1}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">AI<span> Settings</span></div>
+    <span style="color:var(--muted);font-size:12px">DeepSeek / OpenAI-compatible</span>
+    <a class="back" href="ai-assistant.html">← Back to assistant</a>
+  </header>
+
+  <div class="card">
+    <h2>Model connection</h2>
+    <div class="hint">The key is stored locally in <code style="background:var(--surface2);padding:1px 5px;border-radius:4px">dubai-estate/.ai.env</code> (gitignored) and sent only from the local proxy to the model endpoint — never exposed in the page. <strong>DeepSeek</strong> is the default; you can point at any OpenAI-compatible endpoint.</div>
+
+    <div class="status-row" id="conn-status">
+      <span class="dot warn"></span>
+      <span class="lbl" id="conn-text">Checking proxy…</span>
+    </div>
+
+    <div class="presets">
+      <button class="preset" onclick="applyPreset('deepseek')">
+        <span class="pn">🟣 DeepSeek (default)</span>
+        <span class="pd">api.deepseek.com · deepseek-chat</span>
+      </button>
+      <button class="preset" onclick="applyPreset('proxy')">
+        <span class="pn">🖥️ Local cli-proxy-api</span>
+        <span class="pd">127.0.0.1:8317 · reuse running proxy</span>
+      </button>
+    </div>
+
+    <div style="height:14px"></div>
+
+    <div class="field">
+      <label>API Key <span class="sub">(DeepSeek: starts with <code>sk-</code>)</span></label>
+      <input type="password" id="key" placeholder="sk-..." autocomplete="off" />
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Base URL <span class="sub">(OpenAI-compatible)</span></label>
+        <input type="text" id="base_url" placeholder="https://api.deepseek.com" />
+      </div>
+      <div class="field">
+        <label>Model</label>
+        <input type="text" id="model" placeholder="deepseek-chat" />
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="save" onclick="save()">Save settings</button>
+      <button class="btn ghost" id="test-btn" onclick="testConn()">Test connection</button>
+      <div class="test-result" id="test-result"></div>
+    </div>
+
+    <div class="note">
+      <strong>DeepSeek key?</strong> Create one at <a style="color:var(--info)" href="https://platform.deepseek.com" target="_blank" rel="noopener">platform.deepseek.com</a> → API Keys. The official model is <code>deepseek-chat</code> (latest V3.x). When a newer model (e.g. <code>deepseek-v4</code>) ships, just type its name in the Model field — no other change needed.<br><br>
+      <strong>No DeepSeek key yet?</strong> Use the “Local cli-proxy-api” preset — it works instantly with your running proxy (key <code>sk-local-proxy-key-2024</code>).
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Advanced</h2>
+    <div class="hint">The proxy must be running for these settings to take effect. Run the <strong>“Start AI Proxy (DeepSeek assistant)”</strong> VS Code task, or from <code>dubai-estate/</code>:</div>
+    <div class="note"><code>python3 tools/ai_proxy.py</code></div>
+    <div class="hint" style="margin-top:12px">Saved settings are persisted to <code id="envfile">.ai.env</code> and applied live (no restart). Env vars set at startup take precedence until the first save via this page.</div>
+  </div>
+</div>
+<div class="saved-flash" id="flash">Saved ✓</div>
+
+<script>
+const PROXY=(window.DXB_ELECTRON && window.DXB_ELECTRON.aiBase) || 'http://127.0.0.1:8787';
+const $=id=>document.getElementById(id);
+
+const PRESETS={
+  deepseek:{base_url:'https://api.deepseek.com',model:'deepseek-chat'},
+  proxy:{base_url:'http://127.0.0.1:8317',model:'gpt-5.6-terra'},
+};
+
+async function load(){
+  let s;
+  try{
+    const r=await fetch(PROXY+'/ai/settings',{cache:'no-store'});
+    s=await r.json();
+  }catch(e){
+    setConn('bad','Proxy offline — start the “Start AI Proxy” task, then reload.');
+    $('save').disabled=true;$('test-btn').disabled=true;
+    return;
+  }
+  $('base_url').value=s.base_url;
+  $('model').value=s.model;
+  $('key').value='';            // never prefill the real key; placeholder shows status
+  $('key').placeholder=s.key_masked?('current: '+s.key_masked):'sk-...';
+  $('envfile').textContent=s.env_file;
+  setConn(s.configured?'ok':'warn', s.configured
+    ? ('Configured ✓ — '+s.base_url+' · '+s.model+' · key '+s.key_masked)
+    : ('No API key configured yet. Enter your DeepSeek key below.'));
+}
+
+function setConn(kind,text){
+  const row=$('conn-status');row.className='status-row';
+  row.querySelector('.dot').className='dot '+kind;
+  $('conn-text').textContent=text;
+}
+
+function applyPreset(name){
+  const p=PRESETS[name];
+  $('base_url').value=p.base_url;$('model').value=p.model;
+  if(name==='proxy'&&!$('key').value)$('key').value='sk-local-proxy-key-2024';
+  $('test-result').textContent='';
+}
+
+function getPayload(requireKey){
+  const key=$('key').value.trim();
+  const base_url=$('base_url').value.trim();
+  const model=$('model').value.trim();
+  if(!base_url){$('test-result').className='test-result bad';$('test-result').textContent='Base URL is required.';return null;}
+  if(!model){$('test-result').className='test-result bad';$('test-result').textContent='Model is required.';return null;}
+  if(requireKey&&!key){$('test-result').className='test-result bad';$('test-result').textContent='Enter an API key first.';return null;}
+  return {key: key || undefined, base_url, model};
+}
+
+async function save(){
+  const p=getPayload(false);if(!p)return;
+  $('save').disabled=true;$('save').textContent='Saving…';
+  try{
+    const r=await fetch(PROXY+'/ai/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+    const d=await r.json();
+    if(!r.ok||!d.ok)throw new Error(d.message||'save failed');
+    $('key').value='';
+    $('key').placeholder=d.key_masked?('current: '+d.key_masked):'sk-...';
+    setConn(d.configured?'ok':'warn', d.configured
+      ? ('Configured ✓ — '+d.base_url+' · '+d.model+' · key '+d.key_masked)
+      : 'No API key configured. Enter your DeepSeek key and save.');
+    $('test-result').className='test-result';$('test-result').textContent='';
+    flash();
+  }catch(e){
+    setConn('bad','Save failed: '+e.message);
+  }finally{
+    $('save').disabled=false;$('save').textContent='Save settings';
+  }
+}
+
+async function testConn(){
+  const p=getPayload(true);if(!p)return;
+  $('test-btn').disabled=true;
+  const tr=$('test-result');tr.className='test-result spin';tr.textContent='Testing…';
+  try{
+    const r=await fetch(PROXY+'/ai/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});
+    const d=await r.json();
+    if(d.ok){tr.className='test-result ok';tr.textContent='✓ Connected to '+d.model+' in '+(d.ms||'?')+'ms';}
+    else{tr.className='test-result bad';tr.textContent='✗ '+d.message;}
+  }catch(e){tr.className='test-result bad';tr.textContent='✗ '+e.message;}
+  finally{$('test-btn').disabled=false;}
+}
+
+function flash(){const f=$('flash');f.classList.add('show');setTimeout(()=>f.classList.remove('show'),1400);}
+
+load();
+</script>
+</body>
+</html>

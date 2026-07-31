@@ -1,0 +1,19 @@
+.env
+.ai.env
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache
+# PyInstaller / packaging build output
+build/
+dist/
+*.spec.bak
+# Root-anchored on purpose: an unanchored `db/` also matched
+# elt/src/dxb/db/, silently keeping the entire schema out of git.
+/db/
+/data/
+
+# Electron build output
+node_modules/
+release/

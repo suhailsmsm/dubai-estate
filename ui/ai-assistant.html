@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Market Assistant · Dubai Estate Analytics</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;
+  --accent:#f0a500;--accent2:#2ea043;--danger:#e05c5c;--info:#58a6ff;--ai:#a371f7;
+  --text:#e6edf3;--muted:#8b949e;--radius:10px;
+}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+button,input{font-family:inherit}
+#app{display:flex;height:100vh;flex-direction:column}
+header{height:56px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;padding:0 20px;flex-shrink:0}
+.logo{font-size:18px;font-weight:700;color:var(--ai);white-space:nowrap}
+.logo span{color:var(--text);font-weight:400}
+.logo::before{content:'✦ ';color:var(--accent)}
+.sub{font-size:12px;color:var(--muted)}
+.spacer{flex:1}
+.back{font-size:13px;color:var(--muted);padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;text-decoration:none}
+.back:hover{color:var(--text);border-color:var(--accent)}
+#status{font-size:11px;padding:5px 11px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);display:flex;align-items:center;gap:6px}
+#status .dot{width:7px;height:7px;border-radius:50%;background:var(--danger)}
+#status.ok .dot{background:var(--accent2)}
+#body{display:flex;flex:1;overflow:hidden}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#actions{padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.act-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:4px}
+.qbtn{padding:6px 12px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-size:12px;transition:all .12s;white-space:nowrap}
+.qbtn:hover{border-color:var(--ai);color:var(--ai)}
+.qbtn.ex{font-size:11px;color:var(--muted);background:transparent;border-style:dashed}
+.qbtn.ex:hover{color:var(--info);border-color:var(--info)}
+#msgs{flex:1;overflow-y:auto;padding:24px 28px;scrollbar-width:thin}
+#msgs::-webkit-scrollbar{width:8px}
+#msgs::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.msg{max-width:880px;margin:0 auto 18px}
+.msg .role{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;font-weight:600}
+.msg.user .role{color:var(--info)}
+.msg.ai .role{color:var(--ai)}
+.bubble{padding:14px 18px;border-radius:12px;line-height:1.6;font-size:14px}
+.msg.user .bubble{background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.2)}
+.msg.ai .bubble{background:var(--surface);border:1px solid var(--border)}
+.msg.ai .bubble p{margin:0 0 10px}
+.msg.ai .bubble p:last-child{margin-bottom:0}
+.msg.ai .bubble h1,.msg.ai .bubble h2,.msg.ai .bubble h3{margin:14px 0 7px;font-size:15px;color:var(--accent)}
+.msg.ai .bubble h1{font-size:17px}
+.msg.ai .bubble ul,.msg.ai .bubble ol{margin:6px 0 10px;padding-left:22px}
+.msg.ai .bubble li{margin-bottom:4px}
+.msg.ai .bubble code{background:var(--surface2);padding:1px 5px;border-radius:4px;font-size:12px;font-family:ui-monospace,'SF Mono',monospace}
+.msg.ai .bubble pre{background:#010409;border:1px solid var(--border);border-radius:8px;padding:12px;overflow-x:auto;margin:8px 0}
+.msg.ai .bubble pre code{background:none;padding:0}
+.msg.ai .bubble table{border-collapse:collapse;margin:8px 0;width:100%;font-size:12px}
+.msg.ai .bubble th,.msg.ai .bubble td{border:1px solid var(--border);padding:6px 9px;text-align:left}
+.msg.ai .bubble th{background:var(--surface2)}
+.msg.ai .bubble strong{color:var(--text)}
+.msg.ai .bubble em{color:var(--accent2);font-style:normal}
+.msg.sys .bubble{background:rgba(224,92,92,.07);border:1px solid rgba(224,92,92,.25);color:#f0a0a0;font-size:13px}
+.thinking{display:flex;gap:6px;align-items:center;padding:6px 0;color:var(--muted);font-size:13px}
+.thinking .b{width:7px;height:7px;border-radius:50%;background:var(--ai);animation:bounce 1.2s infinite}
+.thinking .b:nth-child(2){animation-delay:.15s}.thinking .b:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,80%,100%{opacity:.3;transform:translateY(0)}40%{opacity:1;transform:translateY(-5px)}}
+.ctx-chip{font-size:10px;color:var(--muted);margin-left:auto;padding:2px 8px;border-radius:10px;background:var(--surface2);border:1px solid var(--border)}
+.empty{text-align:center;padding:50px 20px;color:var(--muted)}
+.empty .e-icon{font-size:40px;margin-bottom:10px}
+.empty h3{color:var(--text);font-size:16px;margin-bottom:6px}
+#composer{padding:14px 28px 20px;background:var(--bg);border-top:1px solid var(--border)}
+.comp-wrap{max-width:880px;margin:0 auto;position:relative}
+#composer textarea{width:100%;resize:none;padding:12px 50px 12px 14px;border-radius:10px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:14px;line-height:1.5;outline:none;max-height:160px;min-height:48px}
+#composer textarea:focus{border-color:var(--ai)}
+#send{position:absolute;right:8px;bottom:8px;width:34px;height:34px;border-radius:8px;border:none;background:var(--ai);color:#fff;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+#send:disabled{background:var(--surface2);color:var(--muted);cursor:not-allowed}
+.comp-hint{font-size:11px;color:var(--muted);margin-top:6px;text-align:center}
+#ctx-panel{width:300px;flex-shrink:0;background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;padding:16px}
+#ctx-panel h4{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.ctx-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(48,54,61,.4)}
+.ctx-row .k{color:var(--muted)}.ctx-row .v{color:var(--text);font-variant-numeric:tabular-nums}
+.ctx-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:10px}
+.ctx-toggle{display:none}
+@media(max-width:1000px){#ctx-panel{display:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">AI<span> Market Assistant</span></div>
+    <div class="sub" id="hdr-sub">Grounded in Bayut + PropertyFinder data</div>
+    <div class="spacer"></div>
+    <div id="status"><span class="dot"></span><span id="status-text">checking…</span></div>
+    <a class="back" href="settings.html" title="AI settings — set your DeepSeek API key">⚙ Settings</a>
+    <a class="back" href="index.html">← Back to app</a>
+  </header>
+  <div id="body">
+    <main id="main">
+      <div id="actions">
+        <span class="act-label">Analyse</span>
+        <button class="qbtn" onclick="quick('summary')">📋 Summarize market</button>
+        <button class="qbtn" onclick="quick('rising')">📈 Rising areas</button>
+        <button class="qbtn" onclick="quick('underpriced')">🎯 Underpriced deals</button>
+        <button class="qbtn" onclick="quick('yield')">💰 Yield trends</button>
+        <button class="qbtn" onclick="quick('recommend')">🚀 Investment ideas</button>
+        <button class="qbtn" onclick="quick('report')">📑 Full report</button>
+      </div>
+      <div id="actions" style="border-top:none;padding-top:0">
+        <span class="act-label">Examples</span>
+        <button class="qbtn ex" onclick="askExample(0)">2BR under AED 1.5M, best appreciation?</button>
+        <button class="qbtn ex" onclick="askExample(1)">Fastest-growing Dubai areas (24mo)?</button>
+        <button class="qbtn ex" onclick="askExample(2)">Developers with strong resale?</button>
+        <button class="qbtn ex" onclick="askExample(3)">Compare Dubai Marina vs Business Bay</button>
+      </div>
+      <div id="msgs"></div>
+      <div id="composer">
+        <div class="comp-wrap">
+          <textarea id="input" rows="1" placeholder="Ask about prices, yields, growth, specific areas…  (e.g. 'Why are rents falling in Business Bay?')"></textarea>
+          <button id="send" onclick="send()">➤</button>
+        </div>
+        <div class="comp-hint">Answers are grounded in the bundled data shown in the right panel. Always verify with the figures and sample sizes — asking prices are directional, not appraisals.</div>
+      </div>
+    </main>
+    <aside id="ctx-panel"></aside>
+  </div>
+</div>
+<script src="data/market-insights.js"></script>
+<script src="data/bayut-pricing-history.js"></script>
+<script>
+const PROXY=(window.DXB_ELECTRON && window.DXB_ELECTRON.aiBase) || 'http://127.0.0.1:8787';
+const MI=window.MARKET_INSIGHTS;
+const BH=window.BAYUT_HISTORY;
+const fmtAed=v=>v==null?'AED —':'AED '+Number(v).toLocaleString('en-US',{maximumFractionDigits:0});
+const fmtN=v=>v==null?'—':Number(v).toLocaleString('en-US');
+const EXAMPLES=[
+  "Where can I buy a 2-bedroom apartment below AED 1.5M with the highest appreciation potential? Rank the options.",
+  "Which Dubai areas grew the fastest in the last 24 months? Give the top 5 with their CAGR and sample sizes.",
+  "Show projects / areas from developers with strong resale performance. (Note: developer names aren't in the data — infer from area-level resale trends and say so.)",
+  "Compare Dubai Marina vs Business Bay for a buy-to-let investor: median price, rent, gross yield and rent trend.",
+];
+const history=[]; // chat history sent to the model
+
+// ---------- context builder ----------
+function areaLine(a){
+  const parts=[`Area: ${a.area} (${a.city})`];
+  if(a.rent_n)parts.push(`rent n=${a.rent_n}, median ${fmtAed(a.med_rent_annual)}/yr`);
+  if(a.sale_n)parts.push(`sale n=${a.sale_n}, median ${fmtAed(a.med_sale)}`);
+  if(a.gross_yield_pct!=null)parts.push(`gross yield ${a.gross_yield_pct}%`);
+  if(a.cagr_pct!=null)parts.push(`rent CAGR ${a.cagr_pct}%/yr (${a.first_year}–${a.last_year})`);
+  else if(a.history&&a.history.length)parts.push(`rent history ${a.first_year}–${a.last_year}`);
+  return parts.join('; ')+'.';
+}
+function buildContext(){
+  const s=MI.summary;
+  const lines=[];
+  lines.push(`DATASET SNAPSHOT (AED, asking prices — directional, not appraisals).`);
+  lines.push(`${s.listings_total} live listings (rent ${s.rent_listings}, sale ${s.sale_listings}) across ${s.areas} areas in ${s.cities.length} cities. ${s.areas_with_history} areas have archived rent history (${s.history_years[0]}–${s.history_years[s.history_years.length-1]}).`);
+  lines.push(`\nFASTEST-APPRECIATING AREAS (median annual asking rent CAGR):`);
+  MI.top_gainers.slice(0,8).forEach(a=>lines.push(`- ${a.area} (${a.city}): ${a.cagr_pct}%/yr, ${a.first_year}–${a.last_year}, latest median ${fmtAed(a.history[a.history.length-1].median)} (n=${a.history[a.history.length-1].n}).`));
+  if(MI.top_losers.length){lines.push(`\nDECLINING AREAS:`);MI.top_losers.slice(0,5).forEach(a=>lines.push(`- ${a.area} (${a.city}): ${a.cagr_pct}%/yr.`));}
+  lines.push(`\nHIGHEST GROSS RENTAL YIELDS (median annual rent / median sale price):`);
+  MI.yield_ranking.slice(0,10).forEach(a=>lines.push(`- ${a.area} (${a.city}): yield ${a.gross_yield_pct}%, rent ${fmtAed(a.med_rent_annual)}, sale ${fmtAed(a.med_sale)} (sale n=${a.sale_n}).`));
+  if(MI.underpriced.length){lines.push(`\nPOTENTIALLY UNDERPRICED RENTALS (>=30% below their area median):`);
+    MI.underpriced.slice(0,8).forEach(u=>lines.push(`- ${u.area} (${u.city}): ${u.type||'?'} ${u.beds!=null?u.beds+'BR':''} at ${fmtAed(u.price)} (${u.discount_pct}% vs area median ${fmtAed(u.area_median_rent)}).`));}
+  lines.push(`\nFULL AREA STATS:`);
+  MI.areas.filter(a=>a.rent_n||a.sale_n).forEach(a=>lines.push('- '+areaLine(a)));
+  return lines.join('\n');
+}
+const CONTEXT=buildContext();
+const SYS=`You are a Dubai/UAE real-estate market analyst embedded in a property analytics app.
+Answer the user's question USING ONLY the provided DATASET below. If the data does not cover something, say so explicitly — never fabricate prices, areas, yields or dates.
+- Always cite the sample size (n=) and the year/period for any figure you quote.
+- Gross yield is before service charges, vacancy and fees.
+- "Appreciation" / CAGR here is based on median ASKING RENT, not transacted sale prices — state this caveat when discussing capital growth.
+- Prefer ranked lists and short tables. Be concise, specific and honest.
+- If asked about developers or projects and the data has none, say so and answer with area-level evidence instead.
+
+${CONTEXT}`;
+
+// ---------- UI ----------
+function $(id){return document.getElementById(id);}
+function setMsgs(html){$('msgs').innerHTML=html;}
+function addMsg(role,html){const m=document.createElement('div');m.className='msg '+role;m.innerHTML=`<div class="role">${role==='ai'?'Assistant':role==='user'?'You':'System'}</div><div class="bubble">${html}</div>`;$('msgs').appendChild(m);$('msgs').scrollTop=$('msgs').scrollHeight;return m;}
+
+// tiny, safe markdown renderer (escapes then reapplies a few tags)
+function md(src){
+  let s=String(src==null?'':src);
+  s=s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // code blocks
+  s=s.replace(/```([\s\S]*?)```/g,(m,c)=>'<pre><code>'+c.replace(/^\n/,'')+'</code></pre>');
+  // inline code
+  s=s.replace(/`([^`\n]+)`/g,'<code>$1</code>');
+  // tables (pipe tables)
+  s=s.replace(/(?:^\|\s*.*\|\s*\n)+/gm,block=>{
+    const rows=block.trim().split('\n').map(r=>r.replace(/^\||\|$/g,'').split('|').map(c=>c.trim()));
+    if(rows.length<2)return block;
+    const isSep=r=>r.every(c=>/^:?-+:?$/.test(c));
+    let body=rows.filter(r=>!isSep(r));
+    const head=body.shift();
+    const th='<tr>'+head.map(c=>'<th>'+c+'</th>').join('')+'</tr>';
+    const trs=body.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join('')+'</tr>').join('');
+    return '<table><thead>'+th+'</thead><tbody>'+trs+'</tbody></table>';
+  });
+  // headings
+  s=s.replace(/^###\s?(.*)$/gm,'<h3>$1</h3>').replace(/^##\s?(.*)$/gm,'<h2>$1</h2>').replace(/^#\s?(.*)$/gm,'<h1>$1</h1>');
+  // bold / italic
+  s=s.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/(^|[^*])\*([^*\n]+)\*/g,'$1<em>$2</em>');
+  // lists
+  s=s.replace(/^\s*[-*]\s+(.*)$/gm,'<li>$1</li>');
+  s=s.replace(/^\s*\d+\.\s+(.*)$/gm,'<li>$1</li>');
+  s=s.replace(/(<li>[\s\S]*?<\/li>)/g,m=>m.replace(/\n/g,''));
+  // paragraphs
+  s=s.split(/\n{2,}/).map(b=>/^<(h\d|ul|ol|pre|table|li)/.test(b.trim())?b:(b.trim()?'<p>'+b.replace(/\n/g,'<br>')+'</p>':'')).join('\n');
+  return s;
+}
+
+function renderEmpty(){
+  setMsgs(`<div class="empty"><div class="e-icon">✦</div>
+    <h3>Ask me anything about the market</h3>
+    <p>Summarize listings, find rising areas, spot underpriced deals, compare communities, predict yield trends, generate reports, or ask natural-language questions.</p>
+    <p style="margin-top:14px;font-size:12px">Try a quick action above ↑</p></div>`);
+}
+
+async function checkProxy(){
+  try{
+    const r=await fetch(PROXY+'/ai/health',{cache:'no-store'});
+    const d=await r.json();
+    const ok=d.configured;
+    const st=$('status'); st.classList.toggle('ok',!!ok);
+    $('status-text').textContent=ok?`AI online · ${d.model}`:'Proxy up, no API key';
+    return ok;
+  }catch(e){
+    $('status-text').textContent='proxy offline';
+    return false;
+  }
+}
+
+async function send(text){
+  text=(text==null?$('input').value:text).trim();
+  if(!text)return;
+  const online=await checkProxy();
+  addMsg('user',escapeHtml(text));
+  history.push({role:'user',content:text});
+  $('input').value='';autoGrow();
+  if(!online){
+    addMsg('sys','<strong>AI proxy not reachable.</strong> Start it with the “Start AI Proxy” task (or <code>python3 tools/ai_proxy.py</code> from <code>dubai-estate</code>). It forwards to DeepSeek (set a key in <code>.ai.env</code>) or to your running cli-proxy-api. See <code>docs/AI_ASSISTANT.md</code>.');
+    return;
+  }
+  const t=addMsg('ai','<div class="thinking"><span class="b"></span><span class="b"></span><span class="b"></span><span style="margin-left:4px">Analysing the data…</span></div>');
+  try{
+    const body={messages:[{role:'system',content:SYS},...history],temperature:0.3};
+    const r=await fetch(PROXY+'/ai/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(d.error){t.querySelector('.bubble').innerHTML=`<strong>Error:</strong> ${escapeHtml(d.message||d.error)}${d.detail?'<br><pre><code>'+escapeHtml(JSON.stringify(d.detail,null,2))+'</code></pre>':''}`;t.classList.add('sys');return;}
+    const content=d.content||'(empty response)';
+    t.querySelector('.bubble').innerHTML=md(content);
+    history.push({role:'assistant',content});
+  }catch(e){
+    t.querySelector('.bubble').innerHTML='<strong>Request failed:</strong> '+escapeHtml(e.message);t.classList.add('sys');
+  }
+}
+function quick(k){
+  const map={
+    summary:'Give me a concise executive summary of the current UAE property market based on this dataset: overall price/rent levels, the standout gainers and decliners, where yields are highest, and 3 key takeaways. Include sample sizes.',
+    rising:'Identify the areas with the fastest-rising asking rents. Rank them by CAGR with sample size and period, and explain possible reasons for the top 3.',
+    underpriced:'List the potentially underpriced rental listings (those priced well below their area median). For each, give the area, price, discount vs area median, and a one-line note on whether it looks like a genuine deal or a data quirk.',
+    yield:'Analyze rental yield trends: rank areas by gross yield, flag where high yield may signal risk, and predict (with caveats) which areas might see yield compression or expansion based on rent-vs-sale growth.',
+    recommend:'Recommend 3-5 investment opportunities from this data for a buy-to-let investor, balancing yield and rent appreciation. For each: area, why, key numbers (yield, CAGR, prices), and the main risk/caveat.',
+    report:'Generate a structured market report with sections: Executive Summary, Top Gainers, Decliners, Yield Leaders, Underpriced Opportunities, Risks & Caveats. Use tables where helpful.',
+  };
+  send(map[k]);
+}
+function askExample(i){send(EXAMPLES[i]);}
+function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function autoGrow(){const t=$('input');t.style.height='auto';t.style.height=Math.min(t.scrollHeight,160)+'px';}
+
+function renderCtxPanel(){
+  const s=MI.summary;
+  const rows=[
+    ['Listings',s.listings_total],
+    ['Rent listings',s.rent_listings],
+    ['Sale listings',s.sale_listings],
+    ['Areas',s.areas],
+    ['With history',s.areas_with_history],
+    ['History span',`${s.history_years[0]}–${s.history_years[s.history_years.length-1]}`],
+    ['Top gainer',MI.top_gainers[0]?`${MI.top_gainers[0].area} (${MI.top_gainers[0].cagr_pct}%/yr)`:'—'],
+    ['Top yielder',MI.yield_ranking[0]?`${MI.yield_ranking[0].area} (${MI.yield_ranking[0].gross_yield_pct}%)`:'—'],
+    ['Underpriced flags',MI.underpriced.length],
+  ];
+  $('ctx-panel').innerHTML=`<h4>Injected data context</h4>`+rows.map(([k,v])=>`<div class="ctx-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('')+
+    `<div class="ctx-note">${MI.note}<br><br>The full per-area stats, rankings and underpriced list are sent to the model with every question so answers are grounded.</div>`;
+}
+
+// ---------- init ----------
+$('input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}});
+$('input').addEventListener('input',autoGrow);
+renderEmpty();renderCtxPanel();checkProxy();
+</script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+name: Build Electron Installer
+
+# Builds the Dubai Estate Electron app + Windows NSIS installer on a free
+# GitHub-hosted Windows runner, then uploads them as downloadable artifacts.
+# Run from the Actions tab (workflow_dispatch) or on tag pushes.
+#
+# This is how you get a real Windows .exe without owning a Windows machine.
+
+on:
+  workflow_dispatch:        # manual: Actions tab → Run workflow
+  push:
+    tags: ["v*"]            # auto on version tags like v1.0.0
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: dubai-estate
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: dubai-estate/package.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Regenerate data bundles
+        run: |
+          python tools/build_bayut_history.py
+          python tools/build_market_insights.py
+        # Python is preinstalled on windows-latest runners.
+
+      - name: Build Windows installer
+        run: npm run dist:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Show build output
+        shell: pwsh
+        run: |
+          Get-ChildItem release -Recurse | Select-Object FullName, @{N='MB';E={[math]::Round($_.Length/1MB,2)}}
+
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: DubaiEstate-electron-windows
+          path: |
+            dubai-estate/release/*.exe
+            dubai-estate/release/*.yml
+          if-no-files-found: error
+
+      - name: Create Release (on tags)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dubai-estate/release/*.exe
+          draft: true

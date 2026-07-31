@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bayut Pricing History · Dubai Estate Analytics</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;
+  --accent:#f0a500;--accent2:#2ea043;--danger:#e05c5c;--info:#58a6ff;
+  --text:#e6edf3;--muted:#8b949e;--radius:10px;
+  --sidebar-w:280px;--header-h:56px;
+}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+a{color:var(--info);text-decoration:none}
+a:hover{text-decoration:underline}
+button{font-family:inherit}
+#app{display:flex;height:100vh;flex-direction:column}
+header{height:var(--header-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;padding:0 20px;flex-shrink:0}
+header .logo{font-size:18px;font-weight:700;color:var(--accent);white-space:nowrap}
+header .logo span{color:var(--text);font-weight:400}
+header .sub{font-size:12px;color:var(--muted)}
+header .spacer{flex:1}
+header .back{font-size:13px;color:var(--muted);padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer}
+header .back:hover{color:var(--text);border-color:var(--accent)}
+#body{display:flex;flex:1;overflow:hidden}
+#sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sb-section{padding:14px 16px 10px;border-bottom:1px solid var(--border)}
+.sb-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px}
+#sidebar label{font-size:12px;color:var(--muted);display:block;margin-bottom:4px}
+#sidebar select,#sidebar input[type=text]{width:100%;padding:7px 10px;border-radius:6px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;outline:none}
+#sidebar select:focus,#sidebar input:focus{border-color:var(--accent)}
+.mode-toggle{display:flex;gap:4px;margin-top:8px}
+.mode-toggle button{flex:1;padding:7px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;font-size:12px}
+.mode-toggle button.active{background:rgba(240,165,0,.12);color:var(--accent);border-color:rgba(240,165,0,.4)}
+.area-search{position:relative}
+.area-list-wrap{flex:1;overflow-y:auto;padding:6px 8px}
+.area-list-wrap::-webkit-scrollbar{width:4px}
+.area-list-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.area-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:6px;cursor:pointer;gap:8px;border:1px solid transparent}
+.area-item:hover{background:var(--surface2)}
+.area-item.selected{background:rgba(240,165,0,.1);border-color:rgba(240,165,0,.3)}
+.area-item .ai-name{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.area-item .ai-city{font-size:10px;color:var(--muted);text-transform:capitalize}
+.area-item .ai-n{font-size:11px;color:var(--muted);flex-shrink:0}
+#main{flex:1;overflow-y:auto;padding:24px 28px}
+#main::-webkit-scrollbar{width:8px}
+#main::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.hero{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+.hcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;min-width:170px}
+.hcard .hc-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.hcard .hc-value{font-size:24px;font-weight:700;margin-top:3px}
+.hcard .hc-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.hcard .hc-up{color:var(--accent2)}
+.hcard .hc-down{color:var(--danger)}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px;overflow:hidden}
+.panel-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.panel-head h2{font-size:14px;font-weight:600}
+.panel-head .pill{font-size:11px;color:var(--muted);padding:3px 10px;border-radius:20px;background:var(--surface2);border:1px solid var(--border)}
+.panel-body{padding:18px}
+.chart-wrap{position:relative;height:340px}
+.caveats{font-size:12px;color:var(--muted);line-height:1.7}
+.caveats ul{padding-left:18px;margin-top:6px}
+.methodology{font-size:12px;color:var(--text);line-height:1.6;margin-top:4px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:9px 12px;text-align:right;border-bottom:1px solid rgba(48,54,61,.5);font-size:13px;font-variant-numeric:tabular-nums}
+th{text-align:left;font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;background:var(--surface);position:sticky;top:0}
+td.lbl{text-align:left;font-weight:500}
+td.year{font-weight:600;color:var(--accent)}
+.tbl-wrap{max-height:380px;overflow:auto}
+.empty{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty .e-icon{font-size:32px;margin-bottom:8px}
+.tier{display:inline-block;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;margin-left:6px;text-transform:uppercase;letter-spacing:.04em}
+.tier.high{background:rgba(46,160,67,.18);color:#56d364}
+.tier.medium{background:rgba(88,166,255,.18);color:#79c0ff}
+.tier.low{background:rgba(224,92,92,.16);color:#f08888}
+.compare-grid{display:grid;grid-template-columns:1fr;gap:14px}
+.legend-row{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin-top:10px}
+.legend-row .lg{display:flex;align-items:center;gap:6px;cursor:pointer}
+.legend-row .sw{width:14px;height:3px;border-radius:2px}
+.toggle-sm{font-size:11px;color:var(--muted);cursor:pointer;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2)}
+.toggle-sm.on{color:var(--accent);border-color:rgba(240,165,0,.4)}
+.tag{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);color:var(--muted)}
+.loading{display:flex;align-items:center;justify-content:center;height:200px;color:var(--muted)}
+.footer-note{font-size:11px;color:var(--muted);margin-top:8px;text-align:right}
+@media(max-width:780px){#sidebar{display:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">Bayut<span> Pricing History</span></div>
+    <div class="sub" id="hdr-sub">Asking-rent analysis · 2016–current</div>
+    <div class="spacer"></div>
+    <span id="hdr-coverage" class="pill" style="font-size:11px;padding:4px 10px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--muted)"></span>
+    <a href="ai-assistant.html" class="back" style="color:var(--muted)">✦ Ask AI</a>
+    <button class="back" onclick="location.href='index.html'">← Back to app</button>
+  </header>
+  <div id="body">
+    <aside id="sidebar">
+      <div class="sb-section">
+        <div class="sb-title">View</div>
+        <div class="mode-toggle">
+          <button id="mode-single" class="active" onclick="setMode('single')">Single area</button>
+          <button id="mode-compare" onclick="setMode('compare')">Compare</button>
+        </div>
+      </div>
+      <div class="sb-section">
+        <label for="f-city">City</label>
+        <select id="f-city" onchange="rebuildAreaList();render()"></select>
+        <div style="height:10px"></div>
+        <div class="area-search">
+          <input type="text" id="f-search" placeholder="Search area…" oninput="rebuildAreaList()" />
+        </div>
+      </div>
+      <div class="sb-section" style="padding-bottom:6px;padding-top:6px;flex:0 0 auto">
+        <div class="sb-title">Areas <span id="area-count" style="float:right;color:var(--muted);font-weight:400;text-transform:none"></span></div>
+      </div>
+      <div class="area-list-wrap" id="area-list"></div>
+    </aside>
+    <main id="main">
+      <div id="content"><div class="loading">Loading…</div></div>
+    </main>
+  </div>
+</div>
+<script src="data/bayut-pricing-history.js"></script>
+<script>
+const D = window.BAYUT_HISTORY;
+const fmt = {
+  aed: v => v==null ? '\u2014' : 'AED ' + Number(v).toLocaleString('en-US',{maximumFractionDigits:0}),
+  num: v => v==null ? '\u2014' : Number(v).toLocaleString('en-US',{maximumFractionDigits:0}),
+  pct: v => v==null ? '\u2014' : (v>=0?'+':'') + Number(v).toFixed(1) + '%',
+  ylbl: y => y === 'current' ? 'Now' : y,
+};
+const state = { city:'', mode:'single', selected:[], chart:null, metric:'median' };
+
+// ---- init ----
+function init(){
+  const cities = [''].concat(D.cities);
+  document.getElementById('f-city').innerHTML = cities.map(c =>
+    `<option value="${c}">${c||'All cities'}</option>`).join('');
+  document.getElementById('hdr-coverage').textContent =
+    `${D.areas.length} areas · ${D.years_present[0]}–${D.years_present[D.years_present.length-1]} archive + live`;
+  rebuildAreaList();
+  // default: first Dubai area with the most history, else first area
+  const dubai = filteredAreas().filter(a=>a.city==='dubai').sort((a,b)=>b.timeline.length-a.timeline.length);
+  const first = (dubai[0] || filteredAreas()[0]);
+  if(first) state.selected = [first.key];
+  render();
+}
+
+function filteredAreas(){
+  let arr = D.areas;
+  if(state.city) arr = arr.filter(a=>a.city===state.city);
+  const q = (document.getElementById('f-search').value||'').toLowerCase().trim();
+  if(q) arr = arr.filter(a=>a.area.toLowerCase().includes(q));
+  return arr;
+}
+
+function rebuildAreaList(){
+  const wrap = document.getElementById('area-list');
+  const arr = filteredAreas().sort((a,b)=>a.area.localeCompare(b.area));
+  document.getElementById('area-count').textContent = '('+arr.length+')';
+  wrap.innerHTML = arr.map(a=>{
+    const sel = state.selected.includes(a.key) ? 'selected':'';
+    const hist = a.timeline.filter(p=>typeof p.year==='number').length;
+    return `<div class="area-item ${sel}" onclick="toggleArea('${escapeAttr(a.key)}')">
+      <div><div class="ai-name">${escapeHtml(a.area)}</div><div class="ai-city">${escapeHtml(a.city)}</div></div>
+      <div class="ai-n">${hist}y</div>
+    </div>`;
+  }).join('') || '<div class="empty" style="padding:20px"><div class="e-icon">\u2014</div>No areas</div>';
+}
+
+function toggleArea(key){
+  if(state.mode==='single'){
+    state.selected = [key];
+  } else {
+    const i = state.selected.indexOf(key);
+    if(i>=0) state.selected.splice(i,1);
+    else { state.selected.push(key); if(state.selected.length>6) state.selected.shift(); }
+  }
+  rebuildAreaList();
+  render();
+}
+function setMode(m){
+  state.mode=m;
+  document.getElementById('mode-single').classList.toggle('active',m==='single');
+  document.getElementById('mode-compare').classList.toggle('active',m==='compare');
+  if(m==='single' && state.selected.length>1) state.selected = state.selected.slice(0,1);
+  rebuildAreaList();
+  render();
+}
+
+// ---- rendering ----
+function render(){
+  const c = document.getElementById('content');
+  if(!state.selected.length){
+    c.innerHTML = `<div class="empty"><div class="e-icon">\u{1F50D}</div><div>Select an area from the left to see its pricing history.</div></div>`;
+    return;
+  }
+  const sel = state.selected.map(k=>D.areas.find(a=>a.key===k)).filter(Boolean);
+  if(state.mode==='compare' || sel.length>1){ renderCompare(sel); return; }
+  renderSingle(sel[0]);
+}
+
+function heroCards(a){
+  const tl = a.timeline.filter(p=>typeof p.year==='number');
+  const cur = a.timeline.find(p=>p.year==='current');
+  let delta=null, first=null;
+  if(tl.length>=2){ first=tl[0]; }
+  const latest = tl[tl.length-1];
+  const cagr = (first && latest && first.year!==latest.year) ?
+    (Math.pow(latest.median/first.median, 1/(latest.year-first.year))-1)*100 : null;
+  const peak = tl.reduce((m,p)=> p.median>(m?.median||0)?p:m, null);
+  const trough = tl.reduce((m,p)=> p.median<(m?.median||Infinity)?p:m, null);
+  const cards = [];
+  cards.push(`<div class="hcard"><div class="hc-label">Latest archive (${latest?latest.year:'—'})</div><div class="hc-value">${fmt.aed(latest&&latest.median)}</div><div class="hc-sub">n=${latest?latest.count:0}</div></div>`);
+  if(cur) cards.push(`<div class="hcard"><div class="hc-label">Live asking (now)</div><div class="hc-value">${fmt.aed(cur.median)}</div><div class="hc-sub">n=${cur.count} · PropertyFinder rent</div></div>`);
+  cards.push(`<div class="hcard"><div class="hc-label">CAGR ${first?first.year:''}→${latest?latest.year:''}</div><div class="hc-value ${cagr>=0?'hc-up':'hc-down'}">${fmt.pct(cagr)}</div><div class="hc-sub">per year, medians</div></div>`);
+  cards.push(`<div class="hcard"><div class="hc-label">Range</div><div class="hc-value" style="font-size:15px">${fmt.aed(trough&&trough.median)} – ${fmt.aed(peak&&peak.median)}</div><div class="hc-sub">trough ${trough?trough.year:''} · peak ${peak?peak.year:''}</div></div>`);
+  return cards.join('');
+}
+
+function renderSingle(a){
+  const c = document.getElementById('content');
+  const tl = a.timeline;
+  c.innerHTML = `
+    <div class="hero">${heroCards(a)}</div>
+    <div class="panel">
+      <div class="panel-head"><h2>${escapeHtml(a.area)} <span class="tag">${escapeHtml(a.city)}</span></h2>
+        <span class="pill">Median annual asking rent · AED</span></div>
+      <div class="panel-body">
+        <div class="chart-wrap"><canvas id="chart"></canvas></div>
+        <div class="footer-note">Bars = interquartile range (p25–p75). Click a point to inspect samples.</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Annual breakdown</h2>
+        <span class="pill">${a.sample_total} samples</span></div>
+      <div class="tbl-wrap"><table id="tbl"></table></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Methodology &amp; caveats</h2></div>
+      <div class="panel-body">
+        <div class="methodology">${escapeHtml(D.methodology)}</div>
+        <div class="caveats"><strong style="color:var(--text)">Read before quoting:</strong>
+          <ul>${D.caveats.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')}</ul></div>
+      </div>
+    </div>`;
+  drawChart([a]);
+  drawTable(a);
+}
+
+function renderCompare(sel){
+  const c = document.getElementById('content');
+  c.innerHTML = `
+    <div class="panel">
+      <div class="panel-head"><h2>Comparison — median asking rent</h2>
+        <span class="pill">${sel.length} areas · all normalized to AED/year</span></div>
+      <div class="panel-body">
+        <div class="chart-wrap"><canvas id="chart"></canvas></div>
+        <div class="legend-row" id="legend"></div>
+        <div class="footer-note">Each line is one (area · city). Toggle series in the legend.</div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Cumulative change (first→last archive point)</h2></div>
+      <div class="panel-body"><table id="cmp-tbl"></table></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Methodology &amp; caveats</h2></div>
+      <div class="panel-body">
+        <div class="methodology">${escapeHtml(D.methodology)}</div>
+        <div class="caveats"><strong style="color:var(--text)">Read before quoting:</strong>
+          <ul>${D.caveats.map(x=>'<li>'+escapeHtml(x)+'</li>').join('')}</ul></div>
+      </div>
+    </div>`;
+  drawChart(sel);
+  drawCompareTable(sel);
+}
+
+// ---- chart ----
+const PALETTE = ['#f0a500','#2ea043','#58a6ff','#f08888','#a371f7','#56d364'];
+function drawChart(areas){
+  if(state.chart){ state.chart.destroy(); state.chart=null; }
+  const ctx = document.getElementById('chart');
+  if(!ctx) return;
+  const datasets = areas.map((a,idx)=>{
+    const pts = a.timeline.map(p=>({x:p.year==='current'?(new Date().getFullYear()):p.year, y:p.median, n:p.count, lo:p.p25, hi:p.p75}));
+    return {
+      label: `${a.area} (${a.city})`,
+      data: pts,
+      borderColor: PALETTE[idx%PALETTE.length],
+      backgroundColor: PALETTE[idx%PALETTE.length]+'22',
+      pointRadius: ctx => areas.length===1?5:3,
+      pointHoverRadius:7, tension:.3, fill: areas.length===1,
+    };
+  });
+  state.chart = new Chart(ctx,{
+    type:'line',
+    data:{datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'nearest',intersect:false},
+      plugins:{
+        legend:{display:areas.length>1,labels:{color:'#8b949e',font:{size:11}}},
+        tooltip:{
+          backgroundColor:'#161b22',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#e6edf3',
+          callbacks:{ label:(c)=>{const p=c.raw;return ` ${fmt.aed(p.y)}  (n=${p.n}, IQR ${fmt.num(p.lo)}–${fmt.num(p.hi)})`;} }
+        }
+      },
+      scales:{
+        x:{type:'linear',title:{display:true,text:'Year',color:'#8b949e'},ticks:{color:'#8b949e',stepSize:1},grid:{color:'#21262d'}},
+        y:{title:{display:true,text:'Median annual rent (AED)',color:'#8b949e'},ticks:{color:'#8b949e',callback:v=>fmt.num(v)},grid:{color:'#21262d'}}
+      }
+    }
+  });
+}
+
+// ---- tables ----
+function drawTable(a){
+  const tbl = document.getElementById('tbl');
+  if(!tbl) return;
+  const rows = a.series;
+  tbl.innerHTML = `<thead><tr><th>Period</th><th>Source</th><th>n</th><th>Min</th><th>P25</th><th>Median</th><th>Mean</th><th>P75</th><th>Max</th></tr></thead>
+    <tbody>${rows.map(r=>{
+      const isCur = (r.year==='current'||r.year==='current_sale');
+      return `<tr><td class="year">${escapeHtml(r.label)}</td>
+        <td class="lbl">${escapeHtml(r.source)}</td>
+        <td>${r.count}</td>
+        <td>${fmt.num(r.min)}</td><td>${fmt.num(r.p25)}</td>
+        <td style="color:var(--accent);font-weight:600">${fmt.num(r.median)}</td>
+        <td>${fmt.num(r.mean)}</td><td>${fmt.num(r.p75)}</td><td>${fmt.num(r.max)}</td></tr>`;
+    }).join('')}</tbody>`;
+}
+
+function drawCompareTable(sel){
+  const tbl = document.getElementById('cmp-tbl');
+  if(!tbl) return;
+  const rows = sel.map(a=>{
+    const tl = a.timeline.filter(p=>typeof p.year==='number');
+    if(!tl.length) return null;
+    const f=tl[0], l=tl[tl.length-1];
+    const chg = f.median? ((l.median/f.median-1)*100):null;
+    const cagr = (f.year!==l.year)? (Math.pow(l.median/f.median,1/(l.year-f.year))-1)*100 : null;
+    return {a, f, l, chg, cagr};
+  }).filter(Boolean).sort((x,y)=>(y.chg||0)-(x.chg||0));
+  tbl.innerHTML = `<thead><tr><th>Area</th><th>First (${rows[0]?rows[0].f.year:''})</th><th>Last (${rows[0]?rows[0].l.year:''})</th><th>Total change</th><th>CAGR</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr><td class="lbl">${escapeHtml(r.a.area)} <span class="tag">${escapeHtml(r.a.city)}</span></td>
+      <td>${fmt.aed(r.f.median)} <span class="tier ${conf(r.f.count)}">n=${r.f.count}</span></td>
+      <td>${fmt.aed(r.l.median)} <span class="tier ${conf(r.l.count)}">n=${r.l.count}</span></td>
+      <td style="color:${(r.chg||0)>=0?'var(--accent2)':'var(--danger)'};font-weight:600">${fmt.pct(r.chg)}</td>
+      <td>${fmt.pct(r.cagr)}</td></tr>`).join('')}</tbody>`;
+}
+function conf(n){ return n>=15?'high':(n>=8?'medium':'low'); }
+
+// ---- utils ----
+function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return String(s).replace(/'/g,"\\'"); }
+
+init();
+</script>
+</body>
+</html>
