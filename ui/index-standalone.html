@@ -25,8 +25,9 @@ header .nav-tabs button{background:none;border:none;color:var(--muted);cursor:po
 header .nav-tabs button:hover{background:var(--surface2);color:var(--text)}
 header .nav-tabs button.active{background:var(--surface2);color:var(--accent)}
 header .spacer{flex:1}
+#online-status{font-size:12px;padding:4px 10px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);white-space:nowrap;display:flex;align-items:center;gap:5px}
+#online-status .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent2)}
 #coverage-pill{font-size:12px;padding:4px 10px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);white-space:nowrap}
-#coverage-pill .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent2);margin-right:5px;vertical-align:middle}
 #body{display:flex;flex:1;overflow:hidden}
 #sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
 #sidebar .sidebar-title{padding:14px 16px 10px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
@@ -119,7 +120,8 @@ header .spacer{flex:1}
       <button onclick="location.href='ai-assistant.html'">AI Assistant</button>
     </div>
     <div class="spacer"></div>
-    <div id="coverage-pill"><span class="dot"></span><span id="coverage-text">Loading...</span></div>
+    <div id="online-status"><span class="dot"></span><span id="online-text">Checking…</span></div>
+    <div id="coverage-pill"><span id="coverage-text">Loading...</span></div>
   </header>
   <div id="body">
     <aside id="sidebar">
@@ -234,9 +236,12 @@ let state = {
 
 // Online status indicator
 function updateOnlineStatus() {
-  const pill = document.getElementById('coverage-pill');
   const isOnline = navigator.onLine;
-  pill.innerHTML = `<span class="dot" style="background:${isOnline ? 'var(--accent2)' : 'var(--danger)'}"></span><span>${isOnline ? 'Online' : 'Offline'}</span>`;
+  const status = document.getElementById('online-status');
+  const dot = status.querySelector('.dot');
+  const text = document.getElementById('online-text');
+  dot.style.background = isOnline ? 'var(--accent2)' : 'var(--danger)';
+  text.textContent = isOnline ? 'Online' : 'Offline';
 }
 
 // Initialize
