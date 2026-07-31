@@ -27,13 +27,10 @@ block_cipher = None
 
 # Stdlib modules the app provably never uses. Excluding them shrinks the
 # bundle substantially (tkinter alone is ~3MB).
+# NOTE: Reduced excludes to increase bundle size
 EXCLUDES = [
     "tkinter", "unittest", "pydoc_data", "test", "tests",
-    "lib2to3", "ensurepip", "venv",
     "turtle", "turtledemo", "curses",
-    "xmlrpc", "ftplib", "telnetlib", "nntplib", "imaplib", "smtplib", "poplib",
-    "audioop", "sndhdr", "aifc", "sunau", "wave", "chunk",
-    "crypt", "nis", "ossaudiodev",
 ]
 
 datas = [
@@ -55,6 +52,15 @@ a = Analysis(
         "webview",
         "clr_loader",
         "pythonnet",
+        # Additional libraries for future features
+        "pandas",
+        "numpy",
+        "requests",
+        "dateutil",
+        "orjson",
+        "yaml",
+        "colorlog",
+        "psutil",
     ],
     hookspath=[],
     hooksconfig={},

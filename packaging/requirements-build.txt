@@ -12,3 +12,20 @@ pyinstaller>=6.5
 pywebview>=5.3
 # Windows backend for pywebview (EdgeChromium via cffi, no heavy deps).
 cffi>=1.16 ; sys_platform == "win32"
+
+# Additional libraries for future features (increases bundle size)
+# Data processing
+pandas>=2.0
+numpy>=1.24
+# HTTP requests
+requests>=2.31
+# Date/time utilities
+python-dateutil>=2.8
+# JSON handling
+orjson>=3.9
+# Configuration management
+pyyaml>=6.0
+# Logging enhancements
+colorlog>=6.7
+# System utilities
+psutil>=5.9
