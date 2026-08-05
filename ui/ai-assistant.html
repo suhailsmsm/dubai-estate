@@ -89,7 +89,6 @@ header{height:56px;background:var(--surface);border-bottom:1px solid var(--borde
     <div class="sub" id="hdr-sub">Grounded in Bayut + PropertyFinder data</div>
     <div class="spacer"></div>
     <div id="status"><span class="dot"></span><span id="status-text">checking…</span></div>
-    <a class="back" href="settings.html" title="AI settings — set your DeepSeek API key">⚙ Settings</a>
     <a class="back" href="index-standalone.html">← Back to app</a>
   </header>
   <div id="body">
@@ -225,7 +224,7 @@ async function checkProxy(){
     const d=await r.json();
     const ok=d.configured;
     const st=$('status'); st.classList.toggle('ok',!!ok);
-    $('status-text').textContent=ok?`AI online · ${d.model}`:'Proxy up, no API key';
+    $('status-text').textContent=ok?`AI online · ${d.model}`:'AI key not set';
     return ok;
   }catch(e){
     $('status-text').textContent='proxy offline';
