@@ -81,15 +81,6 @@ def wait_for_port(host: str, port: int, timeout: float = 10.0) -> bool:
     return False
 
 
-def is_port_in_use(host: str, port: int) -> bool:
-    """Check if something is already listening on the port."""
-    try:
-        with socket.create_connection((host, port), timeout=0.5):
-            return True
-    except OSError:
-        return False
-
-
 def main() -> None:
     # Defer the heavy import so a bad pywebview install doesn't hide the
     # server-startup error that matters more.
@@ -112,27 +103,31 @@ def main() -> None:
     port = ai_proxy.SETTINGS["port"]
 
     # --- Single-instance handling ---
-    # If an existing instance is already serving on this port, don't try to
-    # start a new server (that would crash with "Address already in use").
-    # Just point the window at the existing server. This fixes the
-    # "open app second time" / 404 error.
-    server = None
-    if is_port_in_use("127.0.0.1", port):
-        # Another instance owns the port — reuse it. Make sure STATIC_DIR is
-        # still set so the existing server can serve files (it already is, but
-        # this is a no-op safety net for the local process).
-        ai_proxy.STATIC_DIR = ui_dir()
-    else:
-        # We're the first/only instance — start the server.
-        ai_proxy.STATIC_DIR = ui_dir()
-        # allow_reuse_address avoids "Address already in use" when the previous
-        # instance just closed and the port is in TIME_WAIT.
-        ThreadingHTTPServer.allow_reuse_address = True
-        server = ThreadingHTTPServer(("127.0.0.1", port), ai_proxy.Handler)
-        t = threading.Thread(target=server.serve_forever, daemon=True)
-        t.start()
+    # Strategy: ALWAYS start our own server. If the port is already in use
+    # (another instance running, or a zombie process), we find the next free
+    # port. This avoids the "not_found /" bug where a leftover process from
+    # a previous version is serving stale/non-existent files.
+    import socket as _socket
 
-    url = f"http://127.0.0.1:{port}/"
+    def find_free_port(start: int, max_tries: int = 20) -> int:
+        """Find the first free port starting from `start`."""
+        for p in range(start, start + max_tries):
+            with _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM) as s:
+                try:
+                    s.bind(("127.0.0.1", p))
+                    return p
+                except OSError:
+                    continue
+        return start  # fallback — will likely fail with a clear error
+
+    actual_port = find_free_port(port)
+    ai_proxy.STATIC_DIR = ui_dir()
+    ThreadingHTTPServer.allow_reuse_address = True
+    server = ThreadingHTTPServer(("127.0.0.1", actual_port), ai_proxy.Handler)
+    t = threading.Thread(target=server.serve_forever, daemon=True)
+    t.start()
+
+    url = f"http://127.0.0.1:{actual_port}/"
     if not wait_for_port("127.0.0.1", port):
         # Last resort: open in the default browser if the window fails.
         import webbrowser
@@ -152,8 +147,7 @@ def main() -> None:
     try:
         webview.start(gui="edgechrom" if os.name == "nt" else None)
     finally:
-        if server:
-            server.shutdown()
+        server.shutdown()
 
 
 if __name__ == "__main__":
