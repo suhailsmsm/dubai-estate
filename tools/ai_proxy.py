@@ -285,10 +285,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def _serve_static(self, path: str):
         from urllib.parse import unquote, urlsplit
-        # Map "/" -> index-standalone.html (works with bundled data, no API)
+        # Map "/" -> index.html (works with bundled data, no API)
         rel = unquote(urlsplit(path).path).lstrip("/")
         if rel in ("", "app", "index"):
-            rel = "index-standalone.html"
+            rel = "index.html"
         target = (STATIC_DIR / rel).resolve()
         try:
             target.relative_to(STATIC_DIR.resolve())

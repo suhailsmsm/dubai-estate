@@ -81,6 +81,15 @@ def wait_for_port(host: str, port: int, timeout: float = 10.0) -> bool:
     return False
 
 
+def is_port_in_use(host: str, port: int) -> bool:
+    """Check if something is already listening on the port."""
+    try:
+        with socket.create_connection((host, port), timeout=0.5):
+            return True
+    except OSError:
+        return False
+
+
 def main() -> None:
     # Defer the heavy import so a bad pywebview install doesn't hide the
     # server-startup error that matters more.
@@ -99,16 +108,31 @@ def main() -> None:
     # Re-read settings now that ENV_FILE points at the user dir; merge with any
     # values already loaded from the bundle's default .ai.env.
     ai_proxy.SETTINGS.update(ai_proxy.load_settings())
-    # Serve the bundled UI from the same origin as the API.
-    ai_proxy.STATIC_DIR = ui_dir()
 
     port = ai_proxy.SETTINGS["port"]
-    server = ThreadingHTTPServer(("127.0.0.1", port), ai_proxy.Handler)
-    t = threading.Thread(target=server.serve_forever, daemon=True)
-    t.start()
 
-    # Use the standalone index page that works with bundled data (no API dependency)
-    url = f"http://127.0.0.1:{port}/index-standalone.html"
+    # --- Single-instance handling ---
+    # If an existing instance is already serving on this port, don't try to
+    # start a new server (that would crash with "Address already in use").
+    # Just point the window at the existing server. This fixes the
+    # "open app second time" / 404 error.
+    server = None
+    if is_port_in_use("127.0.0.1", port):
+        # Another instance owns the port — reuse it. Make sure STATIC_DIR is
+        # still set so the existing server can serve files (it already is, but
+        # this is a no-op safety net for the local process).
+        ai_proxy.STATIC_DIR = ui_dir()
+    else:
+        # We're the first/only instance — start the server.
+        ai_proxy.STATIC_DIR = ui_dir()
+        # allow_reuse_address avoids "Address already in use" when the previous
+        # instance just closed and the port is in TIME_WAIT.
+        ThreadingHTTPServer.allow_reuse_address = True
+        server = ThreadingHTTPServer(("127.0.0.1", port), ai_proxy.Handler)
+        t = threading.Thread(target=server.serve_forever, daemon=True)
+        t.start()
+
+    url = f"http://127.0.0.1:{port}/"
     if not wait_for_port("127.0.0.1", port):
         # Last resort: open in the default browser if the window fails.
         import webbrowser
@@ -128,7 +152,8 @@ def main() -> None:
     try:
         webview.start(gui="edgechrom" if os.name == "nt" else None)
     finally:
-        server.shutdown()
+        if server:
+            server.shutdown()
 
 
 if __name__ == "__main__":
