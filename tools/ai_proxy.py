@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -367,6 +368,14 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     global STATIC_DIR
+    # Windows consoles often default to cp1252, where characters like the
+    # banner's checkmark are unencodable — replace instead of crashing.
+    for stream in (sys.stdout, sys.stderr):
+        if stream and hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(errors="replace")
+            except (OSError, ValueError):
+                pass
     import argparse
     ap = argparse.ArgumentParser(description="Dubai Estate AI proxy / app server")
     ap.add_argument("--serve-ui", metavar="DIR", help="Also serve the UI from DIR (same origin as /ai/*)")
@@ -401,4 +410,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # In the PyInstaller bundle this file also runs as a script AFTER app.py
+    # returns (window closed): running main() there would print the banner
+    # against a cp1252 console (UnicodeEncodeError on '✓') and then block
+    # the process in serve_forever() on exit. Auto-run only as the dev CLI.
+    if not getattr(sys, "frozen", False):
+        main()
