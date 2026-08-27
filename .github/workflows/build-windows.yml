@@ -11,6 +11,9 @@ on:
   push:
     tags: ["v*"]            # auto on version tags like v1.0.0
 
+permissions:
+  contents: write           # required to create a GitHub Release on tag pushes
+
 jobs:
   build:
     runs-on: windows-latest
