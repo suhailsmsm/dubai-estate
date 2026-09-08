@@ -141,6 +141,10 @@ button.mini:disabled{opacity:.5;cursor:default}
 const PROXY=(window.DXB_ELECTRON && window.DXB_ELECTRON.aiBase) || 'http://127.0.0.1:8787';
 const $=id=>document.getElementById(id);
 
+// True once a key is saved/configured, so Test/Load can use it without the
+// user re-typing it (the key box is deliberately never pre-filled).
+let haveKey=false;
+
 const PRESETS={
   deepseek:{base_url:'https://api.deepseek.com',model:'deepseek-chat'},
   proxy:{base_url:'http://127.0.0.1:8317',model:'gpt-5.6-terra'},
@@ -161,6 +165,7 @@ async function load(){
   $('key').value='';            // never prefill the real key; placeholder shows status
   $('key').placeholder=s.key_masked?('current: '+s.key_masked):'sk-...';
   $('envfile').textContent=s.env_file;
+  haveKey=!!s.configured;
   setConn(s.configured?'ok':'warn', s.configured
     ? ('Configured ✓ — '+s.base_url+' · '+s.model+' · key '+s.key_masked)
     : ('No API key configured yet. Enter your DeepSeek key below.'));
@@ -244,7 +249,9 @@ function getPayload(requireKey){
   const model=$('model').value.trim();
   if(!base_url){$('test-result').className='test-result bad';$('test-result').textContent='Base URL is required.';return null;}
   if(!model){$('test-result').className='test-result bad';$('test-result').textContent='Model is required.';return null;}
-  if(requireKey&&!key){$('test-result').className='test-result bad';$('test-result').textContent='Enter an API key first.';return null;}
+  // A key is only required when none is saved yet — the box is never prefilled,
+  // so an empty box with a saved key must still work (backend falls back to it).
+  if(requireKey&&!key&&!haveKey){$('test-result').className='test-result bad';$('test-result').textContent='Enter an API key first.';return null;}
   return {key: key || undefined, base_url, model};
 }
 
@@ -257,6 +264,7 @@ async function save(){
     if(!r.ok||!d.ok)throw new Error(d.message||'save failed');
     $('key').value='';
     $('key').placeholder=d.key_masked?('current: '+d.key_masked):'sk-...';
+    haveKey=!!d.configured;
     setConn(d.configured?'ok':'warn', d.configured
       ? ('Configured ✓ — '+d.base_url+' · '+d.model+' · key '+d.key_masked)
       : 'No API key configured. Enter your DeepSeek key and save.');
