@@ -164,6 +164,10 @@ async function load(){
   setConn(s.configured?'ok':'warn', s.configured
     ? ('Configured ✓ — '+s.base_url+' · '+s.model+' · key '+s.key_masked)
     : ('No API key configured yet. Enter your DeepSeek key below.'));
+  // When a key is already set (page load, back from assistant, after save),
+  // repopulate the model chips so they are always visible — otherwise only
+  // the datalist dropdown shows, which filters to the saved model name.
+  if(s.configured) loadModels();
 }
 
 function setConn(kind,text){
