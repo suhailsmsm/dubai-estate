@@ -167,7 +167,7 @@ async function load(){
   // When a key is already set (page load, back from assistant, after save),
   // repopulate the model chips so they are always visible — otherwise only
   // the datalist dropdown shows, which filters to the saved model name.
-  if(s.configured) loadModels();
+  if(s.configured) loadModels(false);
 }
 
 function setConn(kind,text){
@@ -181,11 +181,11 @@ function applyPreset(name){
   $('base_url').value=p.base_url;$('model').value=p.model;
   if(name==='proxy'&&!$('key').value)$('key').value='sk-local-proxy-key-2024';
   $('test-result').textContent='';
-  // Populate the model dropdown from the endpoint as soon as a key is usable.
-  if($('key').value.trim()) loadModels();
+  // Populate the model list after picking a preset so the user can choose.
+  if($('key').value.trim()) loadModels(true);
 }
 
-async function loadModels(){
+async function loadModels(forceShow){
   const p=getPayload(false);if(!p)return;
   const btn=$('load-models');if(btn)btn.disabled=true;
   const tr=$('test-result');
@@ -203,9 +203,12 @@ async function loadModels(){
         c.onclick=()=>{pickModel(m);};
         chips.appendChild(c);
       });
-      // If the saved model is among them, select it and collapse the list —
-      // the chips only need to stay open while the user is choosing one.
-      if($('model').value && d.models.includes($('model').value)) pickModel($('model').value);
+      // Auto-load on page open (no explicit click): if a model is already
+      // saved and valid, select it and collapse the list — nothing to choose.
+      // An explicit "Load models" click (forceShow) always leaves the chips
+      // visible so the user can switch models.
+      const saved = $('model').value;
+      if(!forceShow && saved && d.models.includes(saved)) pickModel(saved);
       tr.className='test-result ok';
       tr.textContent='✓ '+d.models.length+' models — click one, or type in the box.';
     }else if(d.ok){
