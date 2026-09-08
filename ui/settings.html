@@ -41,6 +41,10 @@ header{display:flex;align-items:center;gap:14px;margin-bottom:28px}
 button.mini{background:none;border:1px solid var(--border);color:var(--info);font-size:11px;border-radius:6px;padding:2px 7px;margin-left:6px;cursor:pointer;vertical-align:middle}
 button.mini:hover{border-color:var(--info)}
 button.mini:disabled{opacity:.5;cursor:default}
+.model-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.model-chips .chip{font-size:12px;padding:3px 9px;border-radius:999px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer}
+.model-chips .chip:hover{border-color:var(--ai);color:var(--ai)}
+.model-chips .chip.active{border-color:var(--ai);color:var(--ai);background:rgba(124,192,255,.08)}
 .preset .pn{font-weight:600;display:block}
 .preset .pd{color:var(--muted);font-size:11px;margin-top:2px}
 .actions{display:flex;gap:10px;align-items:center;margin-top:8px}
@@ -104,6 +108,11 @@ button.mini:disabled{opacity:.5;cursor:default}
         <label>Model <button type="button" id="load-models" class="mini" title="Fetch the model list this Base URL + key can actually use">↻ Load models</button></label>
         <input type="text" id="model" list="model-options" placeholder="deepseek-chat" autocomplete="off" />
         <datalist id="model-options"></datalist>
+        <!-- Clickable list of the models the endpoint actually serves. A
+             datalist alone is easy to miss: browsers filter its options to the
+             typed text, so with "deepseek-chat" already in the field the other
+             loaded models never appear. Chips make them always visible. -->
+        <div class="model-chips" id="model-chips"></div>
       </div>
     </div>
 
@@ -180,10 +189,19 @@ async function loadModels(){
     const r=await fetch(PROXY+'/ai/models',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base_url:p.base_url,key:p.key})});
     const d=await r.json();
     const dl=$('model-options');dl.innerHTML='';
+    const chips=$('model-chips');if(chips)chips.innerHTML='';
     if(d.ok&&d.models.length){
-      d.models.forEach(m=>{const o=document.createElement('option');o.value=m;dl.appendChild(o);});
+      d.models.forEach(m=>{
+        const o=document.createElement('option');o.value=m;dl.appendChild(o);
+        // Always-visible chip so every model is pickable even though the
+        // datalist dropdown filters to whatever is already typed in the box.
+        const c=document.createElement('button');c.type='button';c.className='chip';c.textContent=m;
+        c.onclick=()=>{setModel(m);};
+        chips.appendChild(c);
+      });
+      setModel($('model').value);
       tr.className='test-result ok';
-      tr.textContent='✓ '+d.models.length+' models available — open the Model field dropdown to pick one.';
+      tr.textContent='✓ '+d.models.length+' models available — click one above, or type and pick from the dropdown.';
     }else if(d.ok){
       tr.className='test-result bad';
       tr.textContent='Endpoint returned no model list — type the model id manually.';
@@ -193,6 +211,15 @@ async function loadModels(){
     }
   }catch(e){tr.className='test-result bad';tr.textContent='✗ '+e.message;}
   finally{if(btn)btn.disabled=false;}
+}
+
+// Set the model field + highlight the matching chip (if any).
+function setModel(m){
+  if(!m)return;
+  $('model').value=m;
+  const chips=$('model-chips');
+  if(!chips)return;
+  [...chips.children].forEach(c=>c.classList.toggle('active',c.textContent===m));
 }
 
 function getPayload(requireKey){
@@ -242,6 +269,10 @@ async function testConn(){
 function flash(){const f=$('flash');f.classList.add('show');setTimeout(()=>f.classList.remove('show'),1400);}
 
 if($('load-models'))$('load-models').addEventListener('click',loadModels);
+if($('model'))$('model').addEventListener('input',()=>{
+  const chips=$('model-chips');if(!chips)return;
+  [...chips.children].forEach(c=>c.classList.toggle('active',c.textContent===$('model').value));
+});
 
 load();
 </script>
