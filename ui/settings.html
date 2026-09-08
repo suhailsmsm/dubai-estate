@@ -200,12 +200,14 @@ async function loadModels(){
         // Always-visible chip so every model is pickable even though the
         // datalist dropdown filters to whatever is already typed in the box.
         const c=document.createElement('button');c.type='button';c.className='chip';c.textContent=m;
-        c.onclick=()=>{setModel(m);};
+        c.onclick=()=>{pickModel(m);};
         chips.appendChild(c);
       });
-      setModel($('model').value);
+      // If the saved model is among them, select it and collapse the list —
+      // the chips only need to stay open while the user is choosing one.
+      if($('model').value && d.models.includes($('model').value)) pickModel($('model').value);
       tr.className='test-result ok';
-      tr.textContent='✓ '+d.models.length+' models available — click one above, or type and pick from the dropdown.';
+      tr.textContent='✓ '+d.models.length+' models — click one, or type in the box.';
     }else if(d.ok){
       tr.className='test-result bad';
       tr.textContent='Endpoint returned no model list — type the model id manually.';
@@ -215,6 +217,13 @@ async function loadModels(){
     }
   }catch(e){tr.className='test-result bad';tr.textContent='✗ '+e.message;}
   finally{if(btn)btn.disabled=false;}
+}
+
+// A chip was clicked: select it and collapse the chip list.
+function pickModel(m){
+  setModel(m);
+  const chips=$('model-chips');if(chips)chips.innerHTML='';
+  const btn=$('load-models');if(btn)btn.disabled=false;
 }
 
 // Set the model field + highlight the matching chip (if any).
