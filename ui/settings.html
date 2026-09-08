@@ -38,6 +38,9 @@ header{display:flex;align-items:center;gap:14px;margin-bottom:28px}
 .presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
 .preset{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-size:12px;text-align:left;flex:1;min-width:160px}
 .preset:hover{border-color:var(--ai)}
+button.mini{background:none;border:1px solid var(--border);color:var(--info);font-size:11px;border-radius:6px;padding:2px 7px;margin-left:6px;cursor:pointer;vertical-align:middle}
+button.mini:hover{border-color:var(--info)}
+button.mini:disabled{opacity:.5;cursor:default}
 .preset .pn{font-weight:600;display:block}
 .preset .pd{color:var(--muted);font-size:11px;margin-top:2px}
 .actions{display:flex;gap:10px;align-items:center;margin-top:8px}
@@ -98,8 +101,9 @@ header{display:flex;align-items:center;gap:14px;margin-bottom:28px}
         <input type="text" id="base_url" placeholder="https://api.deepseek.com" />
       </div>
       <div class="field">
-        <label>Model</label>
-        <input type="text" id="model" placeholder="deepseek-chat" />
+        <label>Model <button type="button" id="load-models" class="mini" title="Fetch the model list this Base URL + key can actually use">↻ Load models</button></label>
+        <input type="text" id="model" list="model-options" placeholder="deepseek-chat" autocomplete="off" />
+        <datalist id="model-options"></datalist>
       </div>
     </div>
 
@@ -110,7 +114,7 @@ header{display:flex;align-items:center;gap:14px;margin-bottom:28px}
     </div>
 
     <div class="note">
-      <strong>DeepSeek key?</strong> Create one at <a style="color:var(--info)" href="https://platform.deepseek.com" target="_blank" rel="noopener">platform.deepseek.com</a> → API Keys. The official model is <code>deepseek-chat</code> (latest V3.x). When a newer model (e.g. <code>deepseek-v4</code>) ships, just type its name in the Model field — no other change needed.<br><br>
+      <strong>DeepSeek key?</strong> Create one at <a style="color:var(--info)" href="https://platform.deepseek.com" target="_blank" rel="noopener">platform.deepseek.com</a> → API Keys. The official model is <code>deepseek-chat</code> (latest V3.x). Click <strong>↻ Load models</strong> after entering your key to see every model this account can use (e.g. <code>deepseek-reasoner</code>), or just type any model id.<br><br>
       <strong>No DeepSeek key yet?</strong> Use the “Local cli-proxy-api” preset — it works instantly with your running proxy (key <code>sk-local-proxy-key-2024</code>).
     </div>
   </div>
@@ -164,6 +168,31 @@ function applyPreset(name){
   $('base_url').value=p.base_url;$('model').value=p.model;
   if(name==='proxy'&&!$('key').value)$('key').value='sk-local-proxy-key-2024';
   $('test-result').textContent='';
+  // Populate the model dropdown from the endpoint as soon as a key is usable.
+  if($('key').value.trim()) loadModels();
+}
+
+async function loadModels(){
+  const p=getPayload(false);if(!p)return;
+  const btn=$('load-models');if(btn)btn.disabled=true;
+  const tr=$('test-result');
+  try{
+    const r=await fetch(PROXY+'/ai/models',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base_url:p.base_url,key:p.key})});
+    const d=await r.json();
+    const dl=$('model-options');dl.innerHTML='';
+    if(d.ok&&d.models.length){
+      d.models.forEach(m=>{const o=document.createElement('option');o.value=m;dl.appendChild(o);});
+      tr.className='test-result ok';
+      tr.textContent='✓ '+d.models.length+' models available — open the Model field dropdown to pick one.';
+    }else if(d.ok){
+      tr.className='test-result bad';
+      tr.textContent='Endpoint returned no model list — type the model id manually.';
+    }else{
+      tr.className='test-result bad';
+      tr.textContent='✗ '+(d.message||('Model list failed'+(d.status?(' (HTTP '+d.status+')'):'')));
+    }
+  }catch(e){tr.className='test-result bad';tr.textContent='✗ '+e.message;}
+  finally{if(btn)btn.disabled=false;}
 }
 
 function getPayload(requireKey){
@@ -211,6 +240,8 @@ async function testConn(){
 }
 
 function flash(){const f=$('flash');f.classList.add('show');setTimeout(()=>f.classList.remove('show'),1400);}
+
+if($('load-models'))$('load-models').addEventListener('click',loadModels);
 
 load();
 </script>

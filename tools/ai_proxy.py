@@ -121,6 +121,54 @@ def save_settings(base_url: str, model: str, key: str | None) -> dict:
     }
 
 
+def list_models(base_url: str, key: str | None) -> tuple[dict, int]:
+    """Fetch the provider's live model list (OpenAI-compatible GET /models).
+
+    Returns the ids so the settings page can offer a dropdown of what the
+    connected endpoint actually serves (DeepSeek's own list, OpenAI, a local
+    cli-proxy-api with gpt-5.6-terra/kimi/gemini/..., Ollama, ...), instead
+    of a single hardcoded default model.
+    """
+    use_key = (key.strip() if key else None) or SETTINGS["key"]
+    use_base = (base_url.strip() if base_url else None) or SETTINGS["base_url"]
+    use_base = use_base.rstrip("/")
+    if not use_key:
+        return {"ok": False, "message": "No API key set — enter one first."}, 200
+    # Same /v1 join the chat + test routes use, so it matches whichever base
+    # the user stored (DeepSeek, cli-proxy-api, Ollama, ... all serve /v1).
+    req = urllib.request.Request(
+        use_base + "/v1/models",
+        headers={"Authorization": f"Bearer {use_key}"},
+        method="GET",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            obj = json.loads(resp.read().decode("utf-8"))
+        items = obj.get("data") if isinstance(obj, dict) else obj
+        ids = sorted(
+            {
+                str(m.get("id") or m.get("name") or "")
+                for m in (items or [])
+                if isinstance(m, dict) and (m.get("id") or m.get("name"))
+            }
+        )
+        return {"ok": True, "models": ids}, 200
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", "replace")
+        if e.code in (401, 403):
+            return {
+                "ok": False,
+                "status": e.code,
+                "message": (
+                    "Authentication failed — the API key is invalid or belongs to a "
+                    "different provider than this Base URL."
+                ),
+            }, 200
+        return {"ok": False, "status": e.code, "message": _upstream_err(e.code, body)}, 200
+    except urllib.error.URLError as e:
+        return {"ok": False, "message": f"Could not reach {use_base}/models: {e.reason}"}, 200
+
+
 def test_connection(base_url: str, model: str, key: str | None) -> tuple[dict, int]:
     """Tiny 1-token call to verify the key/base_url/model actually work.
 
@@ -353,6 +401,14 @@ class Handler(BaseHTTPRequestHandler):
             body, status = test_connection(
                 base_url=req.get("base_url", ""),
                 model=req.get("model", ""),
+                key=req.get("key") or None,
+            )
+            self._json(status, body)
+            return
+
+        if self.path == "/ai/models":
+            body, status = list_models(
+                base_url=req.get("base_url", ""),
                 key=req.get("key") or None,
             )
             self._json(status, body)

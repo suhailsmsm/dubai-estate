@@ -153,6 +153,35 @@ function upstreamErr(status, obj) {
   return `HTTP ${status}: ${msg || JSON.stringify(obj).slice(0, 160)}`;
 }
 
+async function listModels({ base_url, key }) {
+  const useKey =
+    (key && !String(key).includes("•") && String(key).trim()) || settings.key;
+  const useBase = (base_url && String(base_url).trim()) || settings.base_url;
+  if (!useKey) return { ok: false, message: "No API key set — enter one first." };
+  try {
+    // Same /v1 join as the chat + test routes, so it matches the stored base.
+    const r = await fetch(useBase.replace(/\/+$/, "") + "/v1/models", {
+      headers: { Authorization: `Bearer ${useKey}` },
+    });
+    const obj = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      if (r.status === 401 || r.status === 403)
+        return {
+          ok: false,
+          status: r.status,
+          message:
+            "Authentication failed — the API key is invalid or belongs to a different provider than this Base URL.",
+        };
+      return { ok: false, status: r.status, message: upstreamErr(r.status, obj) };
+    }
+    const items = Array.isArray(obj) ? obj : obj?.data;
+    const ids = [...new Set((items || []).map((m) => m?.id || m?.name).filter(Boolean))].sort();
+    return { ok: true, models: ids };
+  } catch (e) {
+    return { ok: false, message: `Could not reach model list: ${e.message}` };
+  }
+}
+
 // ------------------------------------------------------------ HTTP helpers
 function sendJson(res, status, obj) {
   const body = JSON.stringify(obj);
@@ -248,6 +277,8 @@ function startServer(uiRoot) {
           }
           if (req.url === "/ai/test")
             return sendJson(res, 200, await testConnection(j));
+          if (req.url === "/ai/models")
+            return sendJson(res, 200, await listModels(j));
         }
         return sendJson(res, 404, { error: "not_found", path: req.url });
       }
