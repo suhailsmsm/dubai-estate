@@ -42,11 +42,22 @@ datas = [
 datas += collect_data_files("webview", include_py_files=False)
 
 a = Analysis(
-    [str(REPO_ROOT / "packaging/app.py"), str(REPO_ROOT / "tools/ai_proxy.py")],
-    pathex=[str(REPO_ROOT)],
+    # ONLY app.py is a script entry point. tools/ai_proxy.py is deliberately
+    # NOT listed here: app.py imports it as a module and starts/shuts down its
+    # own server, so a second script entry made PyInstaller re-run ai_proxy's
+    # `__main__` AFTER the window closed — printing the '✓' banner to a cp1252
+    # console and crashing with UnicodeEncodeError on exit. It is still bundled
+    # as an importable module via the hiddenimport below.
+    [str(REPO_ROOT / "packaging/app.py")],
+    # tools/ so the hiddenimport "ai_proxy" (tools/ai_proxy.py) resolves.
+    pathex=[str(REPO_ROOT), str(REPO_ROOT / "tools")],
     binaries=[],
     datas=datas,
     hiddenimports=[
+        # ai_proxy is imported by app.py via a sys.path insert + `import
+        # ai_proxy`, which static analysis cannot resolve — so bundle it as a
+        # plain importable MODULE here (never as a second script/__main__).
+        "ai_proxy",
         "webview.platforms.edgechromium",
         "webview",
         "clr_loader",
